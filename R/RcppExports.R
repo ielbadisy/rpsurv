@@ -3,15 +3,23 @@
 
 #' Negative log-likelihood and gradient for a Royston-Parmar model
 #'
+#' Supports left truncation / counting-process data (genuine time-varying
+#' covariates): each row contributes `logS(stop) - logS(entry)` to the
+#' log-likelihood, `Xentry` and `hasEntry` giving the design row and flag
+#' for the entry (left-truncation) time. Pass `hasEntry` all-zero (and
+#' `Xentry` a matching-shape dummy matrix) for standard right-censored data.
+#'
 #' @param beta parameter vector.
-#' @param X design matrix for the linear predictor eta.
-#' @param dX design matrix for d(eta)/d(log t).
-#' @param logtime log of observed time.
-#' @param status event indicator (1 = event, 0 = censored).
+#' @param X design matrix for the linear predictor eta at the exit (stop) time.
+#' @param dX design matrix for d(eta)/d(log t) at the exit time.
+#' @param Xentry design matrix for eta at the entry (start) time.
+#' @param hasEntry 1 if the row is left-truncated (entry > 0), else 0.
+#' @param logtime log of the exit (stop) time.
+#' @param status event indicator (1 = event, 0 = censored) at the exit time.
 #' @param scale integer scale code: 0 = PH, 1 = PO, 2 = probit.
 #' @return a list with `value` (negative log-likelihood) and `gradient`.
 #' @keywords internal
-rp_negloglik_grad_cpp <- function(beta, X, dX, logtime, status, scale) {
-    .Call(`_rpsurv_rp_negloglik_grad_cpp`, beta, X, dX, logtime, status, scale)
+rp_negloglik_grad_cpp <- function(beta, X, dX, Xentry, hasEntry, logtime, status, scale) {
+    .Call(`_rpsurv_rp_negloglik_grad_cpp`, beta, X, dX, Xentry, hasEntry, logtime, status, scale)
 }
 
