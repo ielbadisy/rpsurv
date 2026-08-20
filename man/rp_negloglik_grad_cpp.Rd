@@ -4,18 +4,22 @@
 \alias{rp_negloglik_grad_cpp}
 \title{Negative log-likelihood and gradient for a Royston-Parmar model}
 \usage{
-rp_negloglik_grad_cpp(beta, X, dX, logtime, status, scale)
+rp_negloglik_grad_cpp(beta, X, dX, Xentry, hasEntry, logtime, status, scale)
 }
 \arguments{
 \item{beta}{parameter vector.}
 
-\item{X}{design matrix for the linear predictor eta.}
+\item{X}{design matrix for the linear predictor eta at the exit (stop) time.}
 
-\item{dX}{design matrix for d(eta)/d(log t).}
+\item{dX}{design matrix for d(eta)/d(log t) at the exit time.}
 
-\item{logtime}{log of observed time.}
+\item{Xentry}{design matrix for eta at the entry (start) time.}
 
-\item{status}{event indicator (1 = event, 0 = censored).}
+\item{hasEntry}{1 if the row is left-truncated (entry > 0), else 0.}
+
+\item{logtime}{log of the exit (stop) time.}
+
+\item{status}{event indicator (1 = event, 0 = censored) at the exit time.}
 
 \item{scale}{integer scale code: 0 = PH, 1 = PO, 2 = probit.}
 }
@@ -23,6 +27,10 @@ rp_negloglik_grad_cpp(beta, X, dX, logtime, status, scale)
 a list with \code{value} (negative log-likelihood) and \code{gradient}.
 }
 \description{
-Negative log-likelihood and gradient for a Royston-Parmar model
+Supports left truncation / counting-process data (genuine time-varying
+covariates): each row contributes \code{logS(stop) - logS(entry)} to the
+log-likelihood, \code{Xentry} and \code{hasEntry} giving the design row and flag
+for the entry (left-truncation) time. Pass \code{hasEntry} all-zero (and
+\code{Xentry} a matching-shape dummy matrix) for standard right-censored data.
 }
 \keyword{internal}

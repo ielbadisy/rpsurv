@@ -9,14 +9,19 @@ rpsurv(
   data,
   df = 4,
   knots = NULL,
-  tvc = NULL,
-  tvc.df = 3,
+  tve = NULL,
+  tve.df = 3,
   scale = c("hazard", "odds", "normal"),
   control = list()
 )
 }
 \arguments{
-\item{formula}{a \code{Surv(time, status) ~ covariates} formula.}
+\item{formula}{a survival formula. Either \code{Surv(time, status) ~ covariates}
+for standard right-censored data, or \code{Surv(start, stop, status) ~ covariates}
+(counting-process form) for left-truncated data and/or genuine
+\strong{time-varying covariates} (a covariate whose \emph{value} changes over
+follow-up): split each subject's follow-up into intervals of constant
+covariate values and pass one row per interval. See Details.}
 
 \item{data}{a data frame.}
 
@@ -26,10 +31,13 @@ rpsurv(
 \item{knots}{optional numeric vector of ALL baseline knots (boundary
 knots first/last), overriding \code{df}.}
 
-\item{tvc}{character vector of covariate names allowed a time-varying
-(non-proportional) effect, each modelled with its own spline in log time.}
+\item{tve}{character vector of covariate names allowed a \strong{time-varying
+effect} (non-proportional hazards/odds/probit): the covariate's
+\emph{coefficient} beta(t) is modelled as its own spline in log time, while
+its value is still fixed for a subject. This is distinct from a
+time-varying \emph{covariate} (see \code{formula}); the two can be combined.}
 
-\item{tvc.df}{degrees of freedom for each time-varying effect spline. Default 3.}
+\item{tve.df}{degrees of freedom for each time-varying effect spline. Default 3.}
 
 \item{scale}{one of \code{"hazard"} (proportional hazards, the Royston-Parmar
 default), \code{"odds"} (proportional odds) or \code{"normal"} (probit).}
@@ -42,3 +50,19 @@ an object of class \code{"rpsurv"}.
 \description{
 Fit a Royston-Parmar flexible parametric survival model
 }
+\section{Time-varying effect vs. time-varying covariate}{
+These are two distinct extensions and \code{rpsurv()} supports both, separately
+or combined:
+\itemize{
+\item \strong{Time-varying effect} (non-proportional hazards): a covariate's value
+is fixed for a subject but its \emph{association with the outcome} changes
+over time, e.g. a treatment effect that fades. Request this with \code{tve}.
+\item \strong{Time-varying covariate}: a covariate's \emph{value} itself changes during
+follow-up, e.g. a lab measurement updated at clinic visits. Represent
+this in the data as counting-process (start, stop] intervals, one row
+per interval with the covariate value held constant within it, and fit
+with \code{Surv(start, stop, status) ~ ...}. \code{rpsurv()} handles the
+corresponding left-truncated likelihood automatically.
+}
+}
+

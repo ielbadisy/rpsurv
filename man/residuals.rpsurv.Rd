@@ -4,13 +4,15 @@
 \alias{residuals.rpsurv}
 \title{Residuals for a Royston-Parmar model}
 \usage{
-\method{residuals}{rpsurv}(object, type = c("coxsnell", "martingale"), ...)
+\method{residuals}{rpsurv}(object, type = c("coxsnell", "martingale", "deviance"), ...)
 }
 \arguments{
 \item{object}{a fitted \code{"rpsurv"} object.}
 
-\item{type}{\code{"coxsnell"} (Cox-Snell residuals, \code{r_i = H(t_i | x_i)}) or
-\code{"martingale"} (\code{d_i - r_i}).}
+\item{type}{\code{"coxsnell"} (Cox-Snell residuals, \code{r_i = H(stop_i) - H(entry_i)}),
+\code{"martingale"} (\code{status_i - r_i}), or \code{"deviance"} (the usual signed
+transform of the martingale residual, roughly symmetric around 0 for a
+well-fitting model).}
 
 \item{...}{unused.}
 }
