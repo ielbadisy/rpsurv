@@ -15,8 +15,13 @@ rp_link_fun <- function(scale) {
   )
 }
 
-rp_start_values <- function(time, status, p, scale) {
+rp_start_values <- function(time, status, p, scale, max_n = 20000L) {
   beta0 <- rep(0, p)
+  if (length(time) > max_n) {
+    idx <- as.integer(seq.int(1L, length(time), length.out = max_n))
+    time <- time[idx]
+    status <- status[idx]
+  }
   sf <- survival::survfit(survival::Surv(time, status) ~ 1)
   keep <- sf$surv > 0 & sf$surv < 1 & sf$time > 0
   if (sum(keep) >= 2L) {
@@ -98,7 +103,10 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
   if (any(entry < 0) || any(entry >= time)) stop("entry times must satisfy 0 <= start < stop", call. = FALSE)
   log_time <- log(time)
   has_entry <- as.numeric(entry > 0)
-  log_entry_safe <- log(ifelse(entry > 0, entry, 1))
+  status_num <- as.numeric(status)
+  log_entry_safe <- entry
+  log_entry_safe[log_entry_safe <= 0] <- 1
+  log_entry_safe <- log(log_entry_safe)
 
   cov_terms <- attr(stats::terms(formula), "term.labels")
   if (length(cov_terms)) {
@@ -143,8 +151,18 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
 
   beta0 <- rp_start_values(time, status, p, scale)
 
-  negloglik <- function(beta) rp_negloglik_grad_cpp(beta, X, dX, Xentry, has_entry, log_time, as.numeric(status), scale_code)$value
-  gradient  <- function(beta) rp_negloglik_grad_cpp(beta, X, dX, Xentry, has_entry, log_time, as.numeric(status), scale_code)$gradient
+  # optim() calls fn() then gr() at the same trial point on every BFGS step;
+  # cache the (fused) C++ call so each point is only evaluated once
+  cache <- new.env(parent = emptyenv())
+  evaluate <- function(beta) {
+    if (is.null(cache$beta) || !identical(beta, cache$beta)) {
+      cache$result <- rp_negloglik_grad_cpp(beta, X, dX, Xentry, has_entry, log_time, status_num, scale_code)
+      cache$beta <- beta
+    }
+    cache$result
+  }
+  negloglik <- function(beta) evaluate(beta)$value
+  gradient  <- function(beta) evaluate(beta)$gradient
 
   opt_control <- utils::modifyList(list(maxit = 500, reltol = 1e-10), control)
   fit <- stats::optim(beta0, negloglik, gradient, method = "BFGS",
