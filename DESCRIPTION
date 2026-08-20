@@ -1,7 +1,7 @@
 Package: rpsurv
 Title: Fast Royston-Parmar Flexible Parametric Survival Models
 Version: 0.0.0.9000
-Authors@R: person("Imad", "El Badisy", email = "elbadisyimad@gmail.com", role = c("aut", "cre"))
+Authors@R: person("Imad", "EL BADISY", email = "elbadisyimad@gmail.com", role = c("aut", "cre"))
 Description: Fits Royston-Parmar flexible parametric survival models
     (Royston & Parmar, 2002) on the log cumulative hazard, odds, and
     probit scales, with time-varying (non-proportional) covariate
@@ -12,6 +12,8 @@ Description: Fits Royston-Parmar flexible parametric survival models
     survival/hazard/cumulative hazard, plotting helpers, and diagnostic
     residuals.
 License: MIT + file LICENSE
+URL: https://github.com/ielbadisy/rpsurv
+BugReports: https://github.com/ielbadisy/rpsurv/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
