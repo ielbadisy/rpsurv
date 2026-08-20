@@ -10,6 +10,19 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// rcs_basis_cpp
+NumericMatrix rcs_basis_cpp(NumericVector x, NumericVector knots, bool derivative);
+RcppExport SEXP _rpsurv_rcs_basis_cpp(SEXP xSEXP, SEXP knotsSEXP, SEXP derivativeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type knots(knotsSEXP);
+    Rcpp::traits::input_parameter< bool >::type derivative(derivativeSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcs_basis_cpp(x, knots, derivative));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rp_negloglik_grad_cpp
 List rp_negloglik_grad_cpp(NumericVector beta, NumericMatrix X, NumericMatrix dX, NumericMatrix Xentry, NumericVector hasEntry, NumericVector logtime, NumericVector status, int scale);
 RcppExport SEXP _rpsurv_rp_negloglik_grad_cpp(SEXP betaSEXP, SEXP XSEXP, SEXP dXSEXP, SEXP XentrySEXP, SEXP hasEntrySEXP, SEXP logtimeSEXP, SEXP statusSEXP, SEXP scaleSEXP) {
@@ -30,6 +43,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_rpsurv_rcs_basis_cpp", (DL_FUNC) &_rpsurv_rcs_basis_cpp, 3},
     {"_rpsurv_rp_negloglik_grad_cpp", (DL_FUNC) &_rpsurv_rp_negloglik_grad_cpp, 8},
     {NULL, NULL, 0}
 };
