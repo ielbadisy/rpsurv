@@ -51,7 +51,8 @@ This vignette covers:
 * the distinction between a **time-varying effect** and a **time-varying
   covariate**, and how each is fit,
 * residual diagnostics,
-* the speed benchmark against `rstpm2`.
+* the speed benchmark against `rstpm2` and `flexsurv`, and what is
+  delegated to C++ to get there.
 
 # The Royston-Parmar model
 
@@ -295,26 +296,61 @@ covers left truncation.
 
 # Speed benchmark {#speed}
 
-The likelihood and gradient are evaluated once per optimiser iteration in
-parallel C++ rather than by repeated R-level evaluation (as a numerical
-gradient would require), so `rpsurv` scales roughly linearly in $n$ with a
-small constant. The figure below compares wall-clock fit time against
-`rstpm2::stpm2` on simulated Weibull-hazard data with two covariates
-(reproducible via `data-raw/benchmark.R`, shipped with the package
-source):
+## What is delegated to C++
+
+Everything on the hot path of fitting is C++, not just the likelihood sum:
+
+* the log-likelihood **and** its analytic gradient are computed in a single
+  parallel pass (`RcppParallel::parallelReduce`) over observations, rather
+  than two separate passes;
+* `optim(method = "BFGS")` calls the objective (`fn`) and the gradient
+  (`gr`) separately at every trial point, which would otherwise mean two
+  full data passes per iteration for the *same* point; `rpsurv` caches the
+  fused C++ result keyed on the parameter vector, so each distinct point
+  is evaluated exactly once;
+* the restricted cubic spline basis itself (`rcs_basis()`, both the basis
+  and its derivative) is computed by `rcs_basis_cpp()` in C++ rather than
+  with R's vectorised-but-still-interpreted arithmetic;
+* the closed-form starting values (`rp_start_values()`) are computed from
+  a bounded subsample (default 20,000 rows) of the Kaplan-Meier curve —
+  they only need to be in the right neighbourhood for BFGS, so this avoids
+  an $O(n\log n)$ sort of the full data purely for initialisation.
+
+What remains in R (`model.frame()`/`model.matrix()` formula parsing, one
+`cbind()` to assemble the design matrix) runs once per fit, not once per
+optimiser iteration, and is a small fraction of total time at the sample
+sizes below.
+
+## Benchmark
+
+The figure and table compare wall-clock fit time against both canonical
+flexible parametric survival packages, `rstpm2::stpm2` and
+`flexsurv::flexsurvspline`, on simulated Weibull-hazard data with two
+covariates (reproducible via `data-raw/benchmark.R`, shipped with the
+package source). `flexsurv::flexsurvspline` is materially slower per fit,
+so it is only run up to $n=2\times10^4$ to keep the benchmark tractable;
+`rstpm2::stpm2` is run up to $n=2\times10^5$.
 
 ```{r benchmark-table, echo = FALSE}
 res <- readRDS(system.file("extdata", "benchmark_results.rds", package = "rpsurv"))
-knitr::kable(res, digits = 3, col.names = c("n", "rpsurv (s)", "stpm2 (s)"))
+knitr::kable(res, digits = 3, col.names = c("n", "rpsurv (s)", "stpm2 (s)", "flexsurvspline (s)"))
 ```
 
 ```{r benchmark-fig, echo = FALSE, out.width = "90%", fig.cap = "Fit time vs. sample size (log-log axes)."}
 knitr::include_graphics("figures/benchmark_speed.png")
 ```
 
-At $n=2\times10^5$, `rpsurv` is about `r round(res$rstpm2[res$n == 2e5] / res$rpsurv[res$n == 2e5], 1)`x
-faster than `rstpm2::stpm2`, and continues to scale to $n=5\times10^5$
-(`rstpm2` was not run at that size). The benchmark code itself:
+At $n=2\times10^5$, `rpsurv` is about
+`r round(res$rstpm2[res$n == 2e5] / res$rpsurv[res$n == 2e5], 1)`x faster
+than `rstpm2::stpm2`, and continues to scale to $n=5\times10^5$ (`rstpm2`
+was not run at that size). Against `flexsurv::flexsurvspline`, at
+$n=2\times10^4$ `rpsurv` is about
+`r round(res$flexsurv[res$n == 2e4] / res$rpsurv[res$n == 2e4], 1)`x
+faster. The advantage widens with $n$ in both comparisons, consistent
+with `rpsurv` doing $O(n)$ work per optimiser step against a single
+parallel pass, versus repeated R-level likelihood evaluation (numerical
+gradients, or gradients built from R-level matrix algebra) in the other
+two packages. The benchmark code itself:
 
 ```{r benchmark-code, eval = FALSE}
 simulate_data <- function(n, seed = 1) {
@@ -330,6 +366,7 @@ simulate_data <- function(n, seed = 1) {
 d <- simulate_data(200000)
 system.time(rpsurv(Surv(time, status) ~ x1 + x2, data = d, df = 4))
 system.time(stpm2(Surv(time, status) ~ x1 + x2, data = d, df = 4))
+system.time(flexsurvspline(Surv(time, status) ~ x1 + x2, data = d, k = 3))
 ```
 
 # Session info
