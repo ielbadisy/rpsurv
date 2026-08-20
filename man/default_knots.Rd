@@ -16,4 +16,13 @@ Places boundary knots at the min/max of \code{x} and interior knots at
 equally spaced centiles of \code{x} restricted to event times, matching the
 default behaviour of \code{rstpm2::stpm2()} / \code{flexsurv::flexsurvspline()}.
 }
+\details{
+When event times are heavily concentrated near one end of the range
+(e.g. an accelerating hazard piling events up before administrative
+censoring), a centile can coincide with a boundary knot. An interior
+knot placed exactly at a boundary knot makes that spline basis column
+identically zero (see \code{rcs_basis()}), which is a silent rank deficiency:
+such knots are dropped, reducing the realised spline df below \code{df} (with
+a warning) rather than fitting a structurally unidentified model.
+}
 \keyword{internal}

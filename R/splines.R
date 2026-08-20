@@ -21,6 +21,14 @@ rcs_basis <- function(x, knots, derivative = FALSE) {
 #' equally spaced centiles of `x` restricted to event times, matching the
 #' default behaviour of `rstpm2::stpm2()` / `flexsurv::flexsurvspline()`.
 #'
+#' When event times are heavily concentrated near one end of the range
+#' (e.g. an accelerating hazard piling events up before administrative
+#' censoring), a centile can coincide with a boundary knot. An interior
+#' knot placed exactly at a boundary knot makes that spline basis column
+#' identically zero (see `rcs_basis()`), which is a silent rank deficiency:
+#' such knots are dropped, reducing the realised spline df below `df` (with
+#' a warning) rather than fitting a structurally unidentified model.
+#'
 #' @param x numeric vector, typically log(event time) for uncensored observations.
 #' @param df degrees of freedom of the spline (number of interior knots + 1).
 #' @keywords internal
@@ -32,6 +40,20 @@ default_knots <- function(x, df) {
   } else {
     probs <- seq_len(nk) / (nk + 1L)
   }
+  kmin <- min(x); kmax <- max(x)
   interior <- if (length(probs)) stats::quantile(x, probs = probs, names = FALSE) else numeric(0)
-  sort(c(min(x), interior, max(x)))
+
+  eps <- sqrt(.Machine$double.eps) * max(1, kmax - kmin)
+  degenerate <- interior < kmin + eps | interior > kmax - eps
+  if (any(degenerate)) {
+    warning(sprintf(
+      "%d interior knot(s) coincide with a boundary knot (event times are concentrated near %s); dropping them, effective spline df is %d instead of %d",
+      sum(degenerate), if (mean(interior[degenerate] > kmax - eps) > 0.5) "the maximum" else "the minimum",
+      df - sum(degenerate), df
+    ), call. = FALSE)
+    interior <- interior[!degenerate]
+  }
+  interior <- unique(interior)
+
+  sort(c(kmin, interior, kmax))
 }
