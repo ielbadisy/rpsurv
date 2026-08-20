@@ -1,0 +1,34 @@
+Package: rpsurv
+Title: Fast Royston-Parmar Flexible Parametric Survival Models
+Version: 0.0.0.9000
+Authors@R: person("Imad", "El Badisy", email = "elbadisyimad@gmail.com", role = c("aut", "cre"))
+Description: Fits Royston-Parmar flexible parametric survival models
+    (Royston & Parmar, 2002) on the log cumulative hazard, odds, and
+    probit scales, with time-varying (non-proportional) covariate
+    effects via restricted cubic splines in log time. The likelihood
+    and its analytic gradient are evaluated in C++ with 'RcppParallel',
+    giving large speedups over pure-R implementations for large
+    datasets. Provides coxph-style summary output, prediction of
+    survival/hazard/cumulative hazard, plotting helpers, and diagnostic
+    residuals.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Depends: R (>= 4.1.0)
+Imports:
+    Rcpp,
+    RcppParallel,
+    survival,
+    stats,
+    graphics,
+    grDevices
+LinkingTo:
+    Rcpp,
+    RcppParallel
+SystemRequirements: GNU make
+Suggests:
+    rstpm2,
+    flexsurv,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
