@@ -47,7 +47,7 @@ predict.rpsurv <- function(object, newdata = NULL, times = NULL,
   for (i in seq_len(nrow(newdata))) {
     cov_i <- newdata[i, colnames(object$cov_data), drop = FALSE]
     cov_rep <- cov_i[rep(1L, length(log_times)), , drop = FALSE]
-    design <- rp_design(log_times, cov_rep, object$knots, object$tvc, object$tvc_knots)
+    design <- rp_design(log_times, cov_rep, object$knots, object$tve, object$tve_knots)
     X <- design$X
     dX <- design$dX
     eta <- as.numeric(X %*% b)

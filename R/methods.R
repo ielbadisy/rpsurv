@@ -45,7 +45,8 @@ print.rpsurv <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   cat("Call:\n")
   print(x$call)
   cat("\nScale:", x$scale, "  Baseline df:", x$p_base - 1L,
-      if (!is.null(x$tvc)) paste0("  Time-varying: ", paste(x$tvc, collapse = ", ")) else "", "\n")
+      if (!is.null(x$tve)) paste0("  Time-varying effect: ", paste(x$tve, collapse = ", ")) else "", "\n")
+  if (isTRUE(x$counting)) cat("Data: counting-process (left truncation / time-varying covariates)\n")
   cat("n =", x$n, ", number of events =", x$nevent, "\n")
   cat("Log-likelihood =", format(x$loglik, digits = digits),
       "  AIC =", format(AIC(x), digits = digits), "\n")
@@ -73,7 +74,8 @@ summary.rpsurv <- function(object, ...) {
       df = object$df,
       aic = AIC(object),
       bic = BIC(object),
-      tvc = object$tvc
+      tve = object$tve,
+      counting = object$counting
     ),
     class = "summary.rpsurv"
   )
