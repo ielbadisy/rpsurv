@@ -12,40 +12,7 @@
 #' @return a matrix with `length(knots) - 1` columns.
 #' @keywords internal
 rcs_basis <- function(x, knots, derivative = FALSE) {
-  knots <- sort(knots)
-  kmin <- knots[1L]
-  kmax <- knots[length(knots)]
-  interior <- knots[-c(1L, length(knots))]
-  nk <- length(interior)
-
-  pos <- function(u) {
-    p <- u
-    p[u < 0] <- 0
-    p
-  }
-
-  if (!derivative) {
-    out <- matrix(0, length(x), nk + 1L)
-    out[, 1L] <- x
-    for (j in seq_len(nk)) {
-      kj <- interior[j]
-      lambda_j <- (kmax - kj) / (kmax - kmin)
-      out[, j + 1L] <- pos(x - kj)^3 -
-        lambda_j * pos(x - kmin)^3 -
-        (1 - lambda_j) * pos(x - kmax)^3
-    }
-  } else {
-    out <- matrix(0, length(x), nk + 1L)
-    out[, 1L] <- 1
-    for (j in seq_len(nk)) {
-      kj <- interior[j]
-      lambda_j <- (kmax - kj) / (kmax - kmin)
-      out[, j + 1L] <- 3 * pos(x - kj)^2 -
-        lambda_j * 3 * pos(x - kmin)^2 -
-        (1 - lambda_j) * 3 * pos(x - kmax)^2
-    }
-  }
-  out
+  rcs_basis_cpp(x, sort(knots), derivative)
 }
 
 #' Default knot placement for a Royston-Parmar spline
