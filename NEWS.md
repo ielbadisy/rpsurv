@@ -2,6 +2,14 @@
 
 ## CRAN submission prep
 
+* Bundled three datasets, each chosen for a specific package feature
+  rather than as a generic example: `brcancer` (baseline fitting example,
+  identical to `rstpm2::brcancer`), `veteran` (a well-known
+  non-proportional-hazards effect, illustrating `tve`, identical to
+  `survival::veteran`), and `heart` (Stanford heart transplant data,
+  already in counting-process format with a time-varying covariate,
+  identical to `survival::heart`). Removes the need for `rstpm2` to be
+  installed just to run the README/vignette examples.
 * Added a detailed `README.md` with real executed output (fit/summary/
   predict, time-varying effects, diagnostics, and the `rstpm2`/`flexsurv`
   speed benchmark table).

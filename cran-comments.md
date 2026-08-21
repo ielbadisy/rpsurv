@@ -6,11 +6,11 @@
 
 ## R CMD check results
 
-0 ERRORs | 0 WARNINGs | 3 NOTEs
+0 ERRORs | 0 WARNINGs | 2-3 NOTEs
 
 * "New submission", standard for a first CRAN submission.
-* "unable to verify current time", a local clock-check note unrelated to
-  the package.
+* "unable to verify current time" appears intermittently, a local
+  clock-check note unrelated to the package.
 * "Compilation used the following non-portable flag(s): -mno-omit-leaf-frame-pointer".
   This comes from the local Ubuntu-packaged R toolchain's own `CFLAGS`
   (confirmed via `R CMD config CFLAGS`), not from the package's own

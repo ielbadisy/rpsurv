@@ -8,6 +8,14 @@
 Fits Royston-Parmar flexible parametric survival models with the
 likelihood and gradient evaluated in parallel C++ ('RcppParallel').
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/ielbadisy/rpsurv}
+  \item Report bugs at \url{https://github.com/ielbadisy/rpsurv/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Imad El Badisy \email{elbadisyimad@gmail.com}
 

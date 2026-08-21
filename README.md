@@ -34,7 +34,7 @@ events).
 library(rpsurv)
 library(survival)
 
-data(brcancer, package = "rstpm2")
+data(brcancer)
 brcancer$hormon <- as.numeric(brcancer$hormon)
 
 fit <- rpsurv(Surv(rectime, censrec) ~ hormon, data = brcancer, df = 4, scale = "hazard")
@@ -170,6 +170,25 @@ gradients built from R-level matrix algebra) in the other two packages.
 See `vignette("rpsurv")` for the full benchmark code and what else is
 delegated to C++ (the spline basis itself, and closed-form starting
 values from a bounded Kaplan-Meier subsample).
+
+## Bundled datasets
+
+`rpsurv` ships three datasets, each chosen for a specific feature of the
+package rather than as a generic example:
+
+- `brcancer`: German breast cancer recurrence data (686 rows), the
+  baseline fitting example used throughout this README and the vignette.
+  Identical to `rstpm2::brcancer`, bundled so examples do not require
+  `rstpm2` to be installed.
+- `veteran`: Veterans' Administration lung cancer trial (137 rows).
+  `celltype` is a well-known non-proportional-hazards effect, which makes
+  this a direct illustration of the `tve` argument. Identical to
+  `survival::veteran`.
+- `heart`: Stanford heart transplant data (172 rows), already in
+  counting-process (`start`, `stop`, `event`) format with a time-varying
+  `transplant` covariate. Illustrates `Surv(start, stop, status)` fitting
+  on a real dataset rather than a constructed one. Identical to
+  `survival::heart`.
 
 ## Notes
 

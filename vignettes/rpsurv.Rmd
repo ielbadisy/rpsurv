@@ -158,7 +158,7 @@ where $X^{(e)}$ is the design row evaluated at $\log e_i$. The scale-specific
 pieces $g'(\eta)$ and $d\log S/d\eta$ are, again, closed form (hazard:
 $g'=1$, $d\log S/d\eta = -e^\eta$; odds: $g'=S$, $d\log S/d\eta=-(1-S)$;
 probit: $g'=-\eta+\phi(\eta)/S$, $d\log S/d\eta=-\phi(\eta)/S$). Evaluating
-$\ell$ and $\nabla\ell$ this way — rather than by finite differences —
+$\ell$ and $\nabla\ell$ this way, rather than by finite differences,
 avoids the $O(p)$ extra likelihood evaluations per optimiser step that a
 numerical gradient would cost, which is the main source of `rpsurv`'s speed
 advantage together with parallel evaluation across observations
@@ -167,13 +167,13 @@ advantage together with parallel evaluation across observations
 An observation with $d_i=1$ and $\dot\eta_i \le 0$ (a locally decreasing,
 i.e. invalid, hazard) is given a large penalty rather than `NaN`, likewise
 any row where $S(e_i) < S(t_i)$ (non-monotone survival across a
-truncation interval) — both keep the optimiser inside the region where the
+truncation interval); both keep the optimiser inside the region where the
 model is a valid survival distribution.
 
 # Fitting API and output
 
 ```{r fit-basic}
-data(brcancer, package = "rstpm2")
+data(brcancer)
 brcancer$hormon <- as.numeric(brcancer$hormon)
 
 fit <- rpsurv(Surv(rectime, censrec) ~ hormon, data = brcancer, df = 4, scale = "hazard")
@@ -199,7 +199,7 @@ plot(fit, newdata = data.frame(hormon = c(0, 1)), col = c("steelblue", "firebric
 # Time-varying effect vs. time-varying covariate
 
 These are two different extensions of the base model, and `rpsurv`
-supports both — separately or together.
+supports both, separately or together.
 
 ## Time-varying effect (non-proportional hazards)
 
@@ -249,7 +249,7 @@ coef(fit_cp)
 ```
 
 `rpsurv` detects the 3-column `Surv` object and fits the left-truncated
-likelihood of Section 2 automatically —
+likelihood of Section 2 automatically:
 each interval contributes $\log S(\text{stop}) - \log S(\text{start})$,
 correctly accounting for the subject having already survived to
 `start` under the covariate value(s) of the *previous* interval. The same
@@ -268,7 +268,7 @@ summary(dev_resid)
 ```
 
 `km_compare_plot()` overlays the model-implied survival curve on the
-nonparametric Kaplan-Meier estimate, by strata of a covariate — a direct
+nonparametric Kaplan-Meier estimate, by strata of a covariate: a direct
 visual check of whether the chosen spline `df` and `scale` capture the
 data:
 
@@ -312,7 +312,7 @@ Everything on the hot path of fitting is C++, not just the likelihood sum:
   and its derivative) is computed by `rcs_basis_cpp()` in C++ rather than
   with R's vectorised-but-still-interpreted arithmetic;
 * the closed-form starting values (`rp_start_values()`) are computed from
-  a bounded subsample (default 20,000 rows) of the Kaplan-Meier curve —
+  a bounded subsample (default 20,000 rows) of the Kaplan-Meier curve;
   they only need to be in the right neighbourhood for BFGS, so this avoids
   an $O(n\log n)$ sort of the full data purely for initialisation.
 
