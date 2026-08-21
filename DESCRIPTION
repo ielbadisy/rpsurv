@@ -1,6 +1,6 @@
 Package: rpsurv
 Title: Fast Royston-Parmar Flexible Parametric Survival Models
-Version: 0.0.0.9000
+Version: 0.6.1
 Authors@R: person("Imad", "El Badisy", email = "elbadisyimad@gmail.com", role = c("aut", "cre"))
 Description: Fits Royston-Parmar flexible parametric survival models
     (Royston & Parmar, 2002) on the log cumulative hazard, odds, and

@@ -5,3 +5,6 @@
 ^\.github$
 ^doc$
 ^Meta$
+^data-raw$
+^cran-comments\.md$
+^.*\.Rcheck$
