@@ -8,9 +8,7 @@ Description: Fits Royston-Parmar flexible parametric survival models
     effects via restricted cubic splines in log time. The likelihood
     and its analytic gradient are evaluated in C++ with 'RcppParallel',
     giving large speedups over pure-R implementations for large
-    datasets. Provides coxph-style summary output, prediction of
-    survival/hazard/cumulative hazard, plotting helpers, and diagnostic
-    residuals.
+    datasets.
 License: MIT + file LICENSE
 URL: https://github.com/ielbadisy/rpsurv
 BugReports: https://github.com/ielbadisy/rpsurv/issues
