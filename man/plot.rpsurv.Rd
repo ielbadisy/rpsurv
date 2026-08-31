@@ -30,6 +30,13 @@ to a single profile at the mean of each covariate.}
 
 \item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
 }
+\value{
+Called for its side effect of drawing the predicted curve(s).
+Invisibly returns the \code{data.frame} of predictions produced by
+\code{\link[=predict.rpsurv]{predict.rpsurv()}}, with columns \code{id} (row of \code{newdata}), \code{time},
+\code{est}, and, when \code{ci = TRUE} and \code{type != "hazard"}, \code{lower} and
+\code{upper} for the 95\% confidence band.
+}
 \description{
 Plot predicted curves from a Royston-Parmar model
 }

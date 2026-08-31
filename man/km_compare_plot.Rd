@@ -17,6 +17,10 @@ mean of the other covariates).}
 
 \item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
 }
+\value{
+No return value, called for its side effect of drawing the
+Kaplan-Meier versus fitted-survival comparison plot.
+}
 \description{
 A calibration / goodness-of-fit diagnostic: overlays the model-predicted
 survival curve on the nonparametric Kaplan-Meier estimate, optionally by

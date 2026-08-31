@@ -1,3 +1,10 @@
+# rpsurv 0.7.1
+
+* CRAN resubmission: added a `<doi:10.1002/sim.1203>` link for the
+  Royston and Parmar (2002) reference in the `DESCRIPTION` Description
+  field, and added `\value` documentation for `coxsnell_plot()`,
+  `km_compare_plot()`, and `plot.rpsurv()`.
+
 # rpsurv 0.7.0
 
 * Added `predict.rpsurv(type = "hr")`: the model-implied instantaneous

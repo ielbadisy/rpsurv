@@ -1,9 +1,10 @@
 Package: rpsurv
 Title: Fast Royston-Parmar Flexible Parametric Survival Models
-Version: 0.7.0
+Version: 0.7.1
 Authors@R: person("Imad", "El Badisy", email = "elbadisyimad@gmail.com", role = c("aut", "cre"))
 Description: Fits Royston-Parmar flexible parametric survival models
-    (Royston & Parmar, 2002) on the log cumulative hazard, odds, and
+    (Royston and Parmar, 2002) <doi:10.1002/sim.1203> on the log
+    cumulative hazard, odds, and
     probit scales, with time-varying (non-proportional) covariate
     effects via restricted cubic splines in log time. The likelihood
     and its analytic gradient are evaluated in C++ with 'RcppParallel',

@@ -1,6 +1,21 @@
-# CRAN submission comments: rpsurv 0.6.1
+# CRAN submission comments: rpsurv 0.7.1
+
+## Resubmission
+
+This is a resubmission. In response to the CRAN reviewer's comments on
+0.6.1:
+
+* Added a reference link to the Description field: the Royston and Parmar
+  (2002) method reference is now given as `<doi:10.1002/sim.1203>`, with
+  no space after `doi:`.
+* Added `\value` sections to the exported `coxsnell_plot()`,
+  `km_compare_plot()` and `plot.rpsurv()` help pages, documenting the
+  class and meaning of the returned object (or that the function is
+  called for its plotting side effect).
 
 ## Test environments
+
+
 
 * Local: Ubuntu 24.04, R 4.5.1
 

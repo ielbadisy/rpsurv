@@ -11,6 +11,12 @@ coxsnell_plot(object, ...)
 
 \item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
 }
+\value{
+Called for its side effect of drawing the diagnostic plot.
+Invisibly returns a \code{data.frame} with columns \code{time} (the sorted
+Cox-Snell residuals) and \code{cumhaz} (their Nelson-Aalen cumulative
+hazard), the coordinates of the plotted step function.
+}
 \description{
 Plots the Nelson-Aalen cumulative hazard of the Cox-Snell residuals
 against the residuals themselves. A well-fitting model gives points

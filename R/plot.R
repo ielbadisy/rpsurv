@@ -8,6 +8,11 @@
 #' @param ci logical; add a 95% confidence band (ignored for `type = "hazard"`).
 #' @param col colour(s), recycled over rows of `newdata`.
 #' @param ... further arguments passed to [graphics::plot()].
+#' @return Called for its side effect of drawing the predicted curve(s).
+#'   Invisibly returns the `data.frame` of predictions produced by
+#'   [predict.rpsurv()], with columns `id` (row of `newdata`), `time`,
+#'   `est`, and, when `ci = TRUE` and `type != "hazard"`, `lower` and
+#'   `upper` for the 95% confidence band.
 #' @export
 plot.rpsurv <- function(x, newdata = NULL, type = c("survival", "hazard", "cumhaz"),
                          times = NULL, ci = TRUE, col = NULL, ...) {

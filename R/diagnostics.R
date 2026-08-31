@@ -38,6 +38,10 @@ residuals.rpsurv <- function(object, type = c("coxsnell", "martingale", "devianc
 #'
 #' @param object a fitted `"rpsurv"` object.
 #' @param ... further arguments passed to [graphics::plot()].
+#' @return Called for its side effect of drawing the diagnostic plot.
+#'   Invisibly returns a `data.frame` with columns `time` (the sorted
+#'   Cox-Snell residuals) and `cumhaz` (their Nelson-Aalen cumulative
+#'   hazard), the coordinates of the plotted step function.
 #' @export
 coxsnell_plot <- function(object, ...) {
   r <- residuals(object, type = "coxsnell")
@@ -63,6 +67,8 @@ coxsnell_plot <- function(object, ...) {
 #'   mean of the other covariates).
 #' @param col colours for KM (solid step) vs model (dashed) curves.
 #' @param ... further arguments passed to [graphics::plot()].
+#' @return No return value, called for its side effect of drawing the
+#'   Kaplan-Meier versus fitted-survival comparison plot.
 #' @export
 km_compare_plot <- function(object, by = NULL, col = c("black", "red"), ...) {
   d <- data.frame(time = object$time, status = object$status, entry = object$entry, object$cov_data)
