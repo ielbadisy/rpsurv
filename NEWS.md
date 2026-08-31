@@ -1,3 +1,15 @@
+# rpsurv 0.7.0
+
+* Added `predict.rpsurv(type = "hr")`: the model-implied instantaneous
+  hazard ratio between a contrast covariate profile (`newdata`) and a
+  reference profile (`newdata0`), computed as the ratio of two
+  `type = "hazard"` predictions. This is the correct contrast under a
+  time-varying effect (`tve`), where `exp(eta1 - eta0)` is not the
+  instantaneous hazard ratio in general. Matches `exp(coef)` exactly
+  under proportional hazards and agrees with `rstpm2::predict(...,
+  type = "hr")` under `tve` to within Monte Carlo/spline-basis tolerance.
+  `se.fit` is not yet supported for `type = "hr"` (nor for `"hazard"`).
+
 # rpsurv 0.6.1
 
 ## CRAN submission prep

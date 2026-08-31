@@ -7,8 +7,9 @@
 \method{predict}{rpsurv}(
   object,
   newdata = NULL,
+  newdata0 = NULL,
   times = NULL,
-  type = c("survival", "hazard", "cumhaz", "link"),
+  type = c("survival", "hazard", "cumhaz", "link", "hr", "sdiff"),
   se.fit = FALSE,
   ...
 )
@@ -17,16 +18,35 @@
 \item{object}{a fitted \code{"rpsurv"} object.}
 
 \item{newdata}{a data frame of covariate values, one row per subject.
-Defaults to the covariate values used to fit the model.}
+Defaults to the covariate values used to fit the model. For
+\code{type \%in\% c("hr", "sdiff")}, this is the \emph{numerator}/contrast
+covariate profile.}
+
+\item{newdata0}{a data frame of covariate values, the \emph{reference}
+profile for \code{type \%in\% c("hr", "sdiff")}, with the same number of
+rows as \code{newdata}. Required (and only used) for those two types.}
 
 \item{times}{numeric vector of times at which to predict. Defaults to
 a grid over the observed follow-up.}
 
-\item{type}{one of \code{"survival"}, \code{"hazard"}, \code{"cumhaz"} or \code{"link"}.}
+\item{type}{one of \code{"survival"}, \code{"hazard"}, \code{"cumhaz"}, \code{"link"},
+\code{"hr"} or \code{"sdiff"}.
+\describe{
+\item{\code{"hr"}}{The model-implied instantaneous hazard ratio,
+\code{hazard(newdata) / hazard(newdata0)}, computed as the ratio of
+two \code{type = "hazard"} predictions. This is the correct contrast
+under a time-varying effect (\code{tve}), where the naive
+\code{exp(eta1 - eta0)} is not the instantaneous hazard ratio in
+general.}
+\item{\code{"sdiff"}}{The survival difference,
+\code{survival(newdata) - survival(newdata0)}.}
+}}
 
 \item{se.fit}{logical; if \code{TRUE}, adds \code{lower}/\code{upper} 95\% confidence
-limits (via the delta method on the linear predictor scale). Only
-supported for \code{type \%in\% c("survival", "cumhaz", "link")}.}
+limits via the delta method: on the linear-predictor scale for
+\code{"survival"}/\code{"cumhaz"}/\code{"link"}; on the log scale for \code{"hazard"}/
+\code{"hr"} (so limits stay positive); on the natural scale for
+\code{"sdiff"}.}
 
 \item{...}{unused.}
 }
@@ -36,4 +56,25 @@ and optionally \code{lower}/\code{upper}.
 }
 \description{
 Predict from a fitted Royston-Parmar model
+}
+\examples{
+\donttest{
+dat <- data.frame(
+  time = rexp(200, 0.2), status = rbinom(200, 1, 0.7), x1 = rbinom(200, 1, 0.5)
+)
+fit <- rpsurv(survival::Surv(time, status) ~ x1, data = dat, tve = "x1")
+tt <- seq(0.5, 4, length.out = 20)
+
+hr <- predict(fit,
+  newdata = data.frame(x1 = 1), newdata0 = data.frame(x1 = 0),
+  times = tt, type = "hr", se.fit = TRUE
+)
+head(hr)
+
+sd <- predict(fit,
+  newdata = data.frame(x1 = 1), newdata0 = data.frame(x1 = 0),
+  times = tt, type = "sdiff", se.fit = TRUE
+)
+head(sd)
+}
 }
