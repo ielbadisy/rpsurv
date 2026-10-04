@@ -15,6 +15,15 @@ rp_link_fun <- function(scale) {
   )
 }
 
+# Spline df for one term: a single value, or a vector named by covariate.
+rp_term_df <- function(df, var, arg) {
+  if (length(df) == 1L && is.null(names(df))) return(as.integer(df))
+  if (is.null(names(df)) || !var %in% names(df)) {
+    stop("`", arg, "` must be a single value or a vector named by covariate (missing ", var, ")", call. = FALSE)
+  }
+  as.integer(df[[var]])
+}
+
 rp_start_values <- function(time, status, p, scale, max_n = 20000L) {
   beta0 <- rep(0, p)
   if (length(time) > max_n) {
@@ -58,7 +67,20 @@ rp_start_values <- function(time, status, p, scale, max_n = 20000L) {
 #'   *coefficient* beta(t) is modelled as its own spline in log time, while
 #'   its value is still fixed for a subject. This is distinct from a
 #'   time-varying *covariate* (see `formula`); the two can be combined.
-#' @param tve.df degrees of freedom for each time-varying effect spline. Default 3.
+#' @param tve.df degrees of freedom for each time-varying effect spline: a
+#'   single value for all `tve` covariates, or a vector named by covariate.
+#'   Default 3.
+#' @param nle character vector of numeric covariate names allowed a smooth
+#'   **non-linear effect** g(x), modelled as a restricted cubic spline in the
+#'   covariate's value (linear beyond the boundary knots, placed at the
+#'   minimum and maximum of the covariate; interior knots at equally spaced
+#'   centiles). The effect does not change over time. A covariate can be in
+#'   both `nle` and `tve`: its log-hazard contribution is then
+#'   g(x) + beta(t) x, and [nlecurve()] and [tvecurve()] return the two
+#'   components separately.
+#' @param nle.df degrees of freedom for each non-linear effect spline (1 is
+#'   linear): a single value for all `nle` covariates, or a vector named by
+#'   covariate. Default 3.
 #' @param scale one of `"hazard"` (proportional hazards, the Royston-Parmar
 #'   default), `"odds"` (proportional odds) or `"normal"` (probit).
 #' @param control list of control parameters passed to [stats::optim()].
@@ -76,10 +98,17 @@ rp_start_values <- function(time, status, p, scale, max_n = 20000L) {
 #'   per interval with the covariate value held constant within it, and fit
 #'   with `Surv(start, stop, status) ~ ...`. `rpsurv()` handles the
 #'   corresponding left-truncated likelihood automatically.
+#'
+#' # Non-linear effect vs. time-varying effect
+#' `tve` lets a covariate's effect change with *time*; `nle` lets it change
+#' with the covariate's own *value*. Each has its own argument and spline
+#' degrees of freedom, so the two components are fitted, reported, and
+#' extracted separately: [tvecurve()] returns beta(t) and [nlecurve()]
+#' returns g(x) - g(ref).
 #' @return an object of class `"rpsurv"`.
 #' @export
 rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
-                    scale = c("hazard", "odds", "normal"), control = list()) {
+                    nle = NULL, nle.df = 3, scale = c("hazard", "odds", "normal"), control = list()) {
   scale <- match.arg(scale)
   scale_code <- rp_scale_code(scale)
 
@@ -123,6 +152,14 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
     }
   }
 
+  if (!is.null(nle)) {
+    missing_nle <- setdiff(nle, names(cov_data))
+    if (length(missing_nle)) {
+      stop("`nle` variable(s) not found among numeric covariates: ", paste(missing_nle, collapse = ", "), call. = FALSE)
+    }
+    if (anyDuplicated(nle)) stop("`nle` must not contain duplicates", call. = FALSE)
+  }
+
   if (is.null(knots)) {
     knots <- default_knots(log_time[status == 1], df)
   } else {
@@ -132,19 +169,34 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
   tve_knots <- NULL
   if (!is.null(tve) && length(tve)) {
     tve_knots <- stats::setNames(
-      lapply(tve, function(v) default_knots(log_time[status == 1], tve.df)),
+      lapply(tve, function(v) default_knots(log_time[status == 1], rp_term_df(tve.df, v, "tve.df"))),
       tve
     )
   }
 
-  design <- rp_design(log_time, cov_data, knots, tve, tve_knots)
+  nle_knots <- NULL
+  if (!is.null(nle) && length(nle)) {
+    nle_knots <- stats::setNames(
+      lapply(nle, function(v) {
+        x <- cov_data[[v]]
+        k <- rp_term_df(nle.df, v, "nle.df")
+        if (length(unique(x)) < k + 2L) {
+          stop("`nle` covariate ", v, " has too few distinct values for nle.df = ", k, call. = FALSE)
+        }
+        default_knots(x, k)
+      }),
+      nle
+    )
+  }
+
+  design <- rp_design(log_time, cov_data, knots, tve, tve_knots, nle, nle_knots)
   X <- design$X
   dX <- design$dX
   p <- ncol(X)
   p_base <- design$p_base
 
   Xentry <- if (any(has_entry > 0)) {
-    rp_design(log_entry_safe, cov_data, knots, tve, tve_knots)$X
+    rp_design(log_entry_safe, cov_data, knots, tve, tve_knots, nle, nle_knots)$X
   } else {
     matrix(0, nrow(X), p)
   }
@@ -186,6 +238,8 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
       knots = knots,
       tve = tve,
       tve_knots = tve_knots,
+      nle = nle,
+      nle_knots = nle_knots,
       counting = counting,
       formula = formula,
       call = match.call(),
