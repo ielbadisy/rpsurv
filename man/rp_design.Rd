@@ -4,11 +4,22 @@
 \alias{rp_design}
 \title{Build the design matrices for a Royston-Parmar model}
 \usage{
-rp_design(log_time, cov_data, knots, tve = NULL, tve_knots = NULL)
+rp_design(
+  log_time,
+  cov_data,
+  knots,
+  tve = NULL,
+  tve_knots = NULL,
+  nle = NULL,
+  nle_knots = NULL
+)
 }
 \description{
 Constructs \code{eta}'s design matrix \code{X} and the design matrix for
 \verb{d(eta)/d(log t)}, \code{dX}, which share the same column layout:
 \verb{[intercept, baseline spline(log t), covariates, tve spline(log t):covariate]}.
+A covariate named in \code{nle} enters the covariate block as its restricted
+cubic spline basis in \code{x} (first column linear) instead of a single
+linear column; it does not depend on time, so its \code{dX} columns are zero.
 }
 \keyword{internal}
