@@ -9,7 +9,8 @@ rp_inv_link <- function(scale) {
 #' @keywords internal
 rp_predict_design <- function(object, cov_i, log_times) {
   cov_rep <- cov_i[rep(1L, length(log_times)), , drop = FALSE]
-  design <- rp_design(log_times, cov_rep, object$knots, object$tve, object$tve_knots)
+  design <- rp_design(log_times, cov_rep, object$knots, object$tve, object$tve_knots,
+                      object$nle, object$nle_knots)
   X <- design$X
   dX <- design$dX
   eta <- as.numeric(X %*% object$coefficients)
