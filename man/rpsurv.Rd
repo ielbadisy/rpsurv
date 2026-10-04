@@ -11,6 +11,8 @@ rpsurv(
   knots = NULL,
   tve = NULL,
   tve.df = 3,
+  nle = NULL,
+  nle.df = 3,
   scale = c("hazard", "odds", "normal"),
   control = list()
 )
@@ -37,7 +39,22 @@ effect} (non-proportional hazards/odds/probit): the covariate's
 its value is still fixed for a subject. This is distinct from a
 time-varying \emph{covariate} (see \code{formula}); the two can be combined.}
 
-\item{tve.df}{degrees of freedom for each time-varying effect spline. Default 3.}
+\item{tve.df}{degrees of freedom for each time-varying effect spline: a
+single value for all \code{tve} covariates, or a vector named by covariate.
+Default 3.}
+
+\item{nle}{character vector of numeric covariate names allowed a smooth
+\strong{non-linear effect} g(x), modelled as a restricted cubic spline in the
+covariate's value (linear beyond the boundary knots, placed at the
+minimum and maximum of the covariate; interior knots at equally spaced
+centiles). The effect does not change over time. A covariate can be in
+both \code{nle} and \code{tve}: its log-hazard contribution is then
+g(x) + beta(t) x, and \code{\link[=nlecurve]{nlecurve()}} and \code{\link[=tvecurve]{tvecurve()}} return the two
+components separately.}
+
+\item{nle.df}{degrees of freedom for each non-linear effect spline (1 is
+linear): a single value for all \code{nle} covariates, or a vector named by
+covariate. Default 3.}
 
 \item{scale}{one of \code{"hazard"} (proportional hazards, the Royston-Parmar
 default), \code{"odds"} (proportional odds) or \code{"normal"} (probit).}
@@ -64,5 +81,13 @@ per interval with the covariate value held constant within it, and fit
 with \code{Surv(start, stop, status) ~ ...}. \code{rpsurv()} handles the
 corresponding left-truncated likelihood automatically.
 }
+}
+
+\section{Non-linear effect vs. time-varying effect}{
+\code{tve} lets a covariate's effect change with \emph{time}; \code{nle} lets it change
+with the covariate's own \emph{value}. Each has its own argument and spline
+degrees of freedom, so the two components are fitted, reported, and
+extracted separately: \code{\link[=tvecurve]{tvecurve()}} returns beta(t) and \code{\link[=nlecurve]{nlecurve()}}
+returns g(x) - g(ref).
 }
 
