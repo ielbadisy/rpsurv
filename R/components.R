@@ -16,8 +16,8 @@
 #' @param ref reference value; `g(ref)` is subtracted. Defaults to the median
 #'   of the covariate in the fitted data.
 #' @param se.fit logical; add `se`, `lower`, and `upper`.
-#' @return a data frame with columns `x` and `est`, and optionally `se`,
-#'   `lower`, and `upper`.
+#' @return a data frame of class `"nlecurve"` with columns `x` and `est`,
+#'   and optionally `se`, `lower`, and `upper`; see [plot.nlecurve()].
 #' @examples
 #' \donttest{
 #' set.seed(1)
@@ -26,7 +26,9 @@
 #' dat <- data.frame(time = rexp(n, 0.2 * exp((x - 1.5)^2 / 2)),
 #'                   status = 1, x = x)
 #' fit <- rpsurv(survival::Surv(time, status) ~ x, data = dat, nle = "x")
-#' head(nlecurve(fit, "x", ref = 1.5))
+#' g <- nlecurve(fit, "x", ref = 1.5)
+#' head(g)
+#' plot(g)
 #' }
 #' @export
 nlecurve <- function(object, var, at = NULL, ref = NULL, se.fit = TRUE) {
@@ -49,7 +51,8 @@ nlecurve <- function(object, var, at = NULL, ref = NULL, se.fit = TRUE) {
     out$lower <- est - z * se
     out$upper <- est + z * se
   }
-  out
+  structure(out, class = c("nlecurve", "data.frame"), var = var, ref = ref,
+            scale = object$scale)
 }
 
 #' Time-varying effect component of a covariate
@@ -76,13 +79,14 @@ nlecurve <- function(object, var, at = NULL, ref = NULL, se.fit = TRUE) {
 #' @param type `"hr"` or `"link"`.
 #' @param ref reference value of `var` for `type = "hr"`. Default 0.
 #' @param se.fit logical; add `se`, `lower`, and `upper`.
-#' @return a data frame with columns `time` and `est`, and optionally `se`,
-#'   `lower`, and `upper`.
+#' @return a data frame of class `"tvecurve"` with columns `time` and `est`,
+#'   and optionally `se`, `lower`, and `upper`; see [plot.tvecurve()].
 #' @examples
 #' \donttest{
 #' fit <- rpsurv(survival::Surv(time, status) ~ trt + karno, data = veteran,
 #'               tve = "karno", nle = "karno")
 #' tvecurve(fit, "karno", times = c(30, 90, 180), ref = 50)
+#' plot(tvecurve(fit, "karno", ref = 50))
 #' }
 #' @export
 tvecurve <- function(object, var, times = NULL, type = c("hr", "link"), ref = 0,
@@ -136,5 +140,6 @@ tvecurve <- function(object, var, times = NULL, type = c("hr", "link"), ref = 0,
     out$lower <- est - z * se
     out$upper <- est + z * se
   }
-  out
+  structure(out, class = c("tvecurve", "data.frame"), var = var, type = type,
+            ref = ref, scale = object$scale)
 }

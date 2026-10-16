@@ -28,8 +28,8 @@ over the observed event times.}
 \item{se.fit}{logical; add \code{se}, \code{lower}, and \code{upper}.}
 }
 \value{
-a data frame with columns \code{time} and \code{est}, and optionally \code{se},
-\code{lower}, and \code{upper}.
+a data frame of class \code{"tvecurve"} with columns \code{time} and \code{est},
+and optionally \code{se}, \code{lower}, and \code{upper}; see \code{\link[=plot.tvecurve]{plot.tvecurve()}}.
 }
 \description{
 Returns the fitted time-varying effect of a covariate named in \code{tve}, with
@@ -55,5 +55,6 @@ effect belongs to g, so beta(t) is the spline part only.
 fit <- rpsurv(survival::Surv(time, status) ~ trt + karno, data = veteran,
               tve = "karno", nle = "karno")
 tvecurve(fit, "karno", times = c(30, 90, 180), ref = 50)
+plot(tvecurve(fit, "karno", ref = 50))
 }
 }

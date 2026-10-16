@@ -20,8 +20,8 @@ of the covariate in the fitted data.}
 \item{se.fit}{logical; add \code{se}, \code{lower}, and \code{upper}.}
 }
 \value{
-a data frame with columns \code{x} and \code{est}, and optionally \code{se},
-\code{lower}, and \code{upper}.
+a data frame of class \code{"nlecurve"} with columns \code{x} and \code{est},
+and optionally \code{se}, \code{lower}, and \code{upper}; see \code{\link[=plot.nlecurve]{plot.nlecurve()}}.
 }
 \description{
 Returns the fitted non-linear effect g(x) - g(ref) of a covariate named in
@@ -41,6 +41,8 @@ x <- runif(n, 0, 3)
 dat <- data.frame(time = rexp(n, 0.2 * exp((x - 1.5)^2 / 2)),
                   status = 1, x = x)
 fit <- rpsurv(survival::Surv(time, status) ~ x, data = dat, nle = "x")
-head(nlecurve(fit, "x", ref = 1.5))
+g <- nlecurve(fit, "x", ref = 1.5)
+head(g)
+plot(g)
 }
 }
