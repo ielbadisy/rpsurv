@@ -246,3 +246,56 @@ test_that("genuine time-varying covariate (counting-process split data) fits and
   expect_true(fit$convergence == 0L)
   expect_true(is.finite(coef(fit)["x1"]))
 })
+
+test_that("tve on a large-scale covariate gives a positive-definite vcov (veteran karno)", {
+  fit <- rpsurv(survival::Surv(time, status) ~ trt + karno, data = veteran, tve = "karno")
+  expect_equal(fit$convergence, 0L)
+  expect_true(all(is.finite(sqrt(diag(vcov(fit))))))
+  expect_gt(min(eigen(vcov(fit), symmetric = TRUE, only.values = TRUE)$values), 0)
+  expect_no_warning(summary(fit))
+  # stored reference: rstpm2 1.6.9, stpm2(Surv(time, status) ~ trt + karno,
+  # data = veteran, df = 4, tvc = list(karno = 3))
+  expect_equal(fit$loglik, -718.43730, tolerance = 1e-6)
+  expect_equal(unname(coef(fit)[c("trt", "karno")]), c(-0.02426851, -0.03462938), tolerance = 1e-3)
+  expect_equal(unname(sqrt(diag(vcov(fit)))[c("(Intercept)", "trt", "karno")]),
+               c(2.31288908, 0.18918273, 0.05287666), tolerance = 1e-4)
+
+  tc <- tvecurve(fit, "karno", ref = 50)
+  expect_true(all(is.finite(tc$se)) && all(tc$se > 0))
+  expect_true(all(is.finite(tc$lower)) && all(is.finite(tc$upper)))
+  fit2 <- rpsurv(survival::Surv(time, status) ~ trt + karno, data = veteran,
+                 tve = "karno", nle = "karno")
+  expect_true(all(is.finite(sqrt(diag(vcov(fit2))))))
+  expect_true(all(is.finite(tvecurve(fit2, "karno", ref = 50)$se)))
+})
+
+# Map an rpsurv fit into stpm2's parameterisation (same model space, different
+# spline bases): X_rp = X_st M, so b_st = M b_rp and V_st = M V_rp M'.
+rp_in_stpm2_basis <- function(fit, ref) {
+  M <- qr.solve(ref@args$X, fit$X)
+  list(coef = drop(M %*% coef(fit)), vcov = M %*% vcov(fit) %*% t(M))
+}
+
+test_that("tve fits match rstpm2::stpm2 in coefficients and full vcov", {
+  skip_if_not_installed("rstpm2")
+  suppressPackageStartupMessages(library(rstpm2)) # stpm2() calls internal gsm() unqualified
+  d <- get_brcancer()
+  cases <- list(
+    list(rpsurv(survival::Surv(time, status) ~ trt + karno, data = veteran, tve = "karno"),
+         rstpm2::stpm2(survival::Surv(time, status) ~ trt + karno, data = veteran, df = 4,
+                       tvc = list(karno = 3))),
+    list(rpsurv(survival::Surv(rectime, censrec) ~ hormon + x1 + x5, data = d, tve = "x1"),
+         rstpm2::stpm2(survival::Surv(rectime, censrec) ~ hormon + x1 + x5, data = d, df = 4,
+                       tvc = list(x1 = 3))),
+    list(rpsurv(survival::Surv(rectime, censrec) ~ hormon + x6, data = d, tve = "x6", scale = "normal"),
+         rstpm2::stpm2(survival::Surv(rectime, censrec) ~ hormon + x6, data = d, df = 4,
+                       tvc = list(x6 = 3), link.type = "probit"))
+  )
+  for (cs in cases) {
+    fit <- cs[[1]]; ref <- cs[[2]]
+    mapped <- rp_in_stpm2_basis(fit, ref)
+    expect_equal(fit$loglik, -ref@min, tolerance = 1e-6)
+    expect_equal(unname(mapped$coef), unname(coef(ref)), tolerance = 1e-3)
+    expect_equal(unname(sqrt(diag(mapped$vcov))), unname(sqrt(diag(vcov(ref)))), tolerance = 1e-3)
+  }
+})
