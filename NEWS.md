@@ -1,3 +1,19 @@
+# rpsurv (development version)
+
+* Fixed non-positive-definite variance-covariance matrices (NaN standard
+  errors, "NaNs produced" in `summary()`) for fits with a time-varying
+  effect of a covariate on a large scale, e.g. `tve = "karno"` on
+  `veteran`. The covariate times the cubic spline in log time made the
+  optimisation badly conditioned, so the optimiser stopped early and the
+  finite-difference Hessian was indefinite. `rpsurv()` now optimises over
+  an orthogonalised linear reparameterisation of the design (from its QR
+  decomposition) and maps the coefficients and variance-covariance matrix
+  back exactly. Standard errors of `tve` fits on continuous covariates now
+  agree with `rstpm2::stpm2()`; earlier finite standard errors for such
+  fits could also be inaccurate. Point estimates are unchanged up to
+  optimiser tolerance. Settings in `control` such as `parscale` now refer
+  to the internal parameterisation.
+
 # rpsurv 0.8.1
 
 * `tvecurve()` and `nlecurve()` now return data frames of class
