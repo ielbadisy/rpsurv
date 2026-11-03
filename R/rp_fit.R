@@ -84,6 +84,9 @@ rp_start_values <- function(time, status, p, scale, max_n = 20000L) {
 #' @param scale one of `"hazard"` (proportional hazards, the Royston-Parmar
 #'   default), `"odds"` (proportional odds) or `"normal"` (probit).
 #' @param control list of control parameters passed to [stats::optim()].
+#'   The optimisation runs on an internal orthogonalised parameterisation
+#'   (see Details), so parameter-scale settings such as `parscale` or
+#'   `ndeps` refer to that parameterisation.
 #'
 #' @details
 #' # Time-varying effect vs. time-varying covariate
@@ -105,6 +108,16 @@ rp_start_values <- function(time, status, p, scale, max_n = 20000L) {
 #' degrees of freedom, so the two components are fitted, reported, and
 #' extracted separately: [tvecurve()] returns beta(t) and [nlecurve()]
 #' returns g(x) - g(ref).
+#'
+#' # Estimation
+#' The log-likelihood and its analytic gradient are maximised with BFGS
+#' over a linear reparameterisation of the coefficients in which the design
+#' matrix has orthogonal, unit-scale columns (from its QR decomposition).
+#' This keeps the problem well conditioned when covariates on large scales
+#' multiply the time spline basis in `tve` terms. The Hessian is obtained by
+#' central differences of the analytic gradient in that parameterisation,
+#' and the coefficients and their variance-covariance matrix are mapped
+#' back exactly to the scale of the original design.
 #' @return an object of class `"rpsurv"`.
 #' @export
 rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
@@ -203,31 +216,49 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
 
   beta0 <- rp_start_values(time, status, p, scale)
 
+  # Optimise over gamma = T^{-1} beta, with T chosen so that the working
+  # design X %*% T is orthogonal with unit-RMS columns. eta is linear in
+  # beta, so X, dX and Xentry all map through the same T and the likelihood
+  # is unchanged. Without this, products such as a tve covariate in the
+  # tens times a cubic spline in log time make the Hessian so ill
+  # conditioned that BFGS stops early and the finite-difference Hessian is
+  # not positive definite.
+  Tm <- rp_reparam(X)
+  Z <- X %*% Tm
+  dZ <- dX %*% Tm
+  Zentry <- Xentry %*% Tm
+  gamma0 <- drop(solve(Tm, beta0))
+
   # optim() calls fn() then gr() at the same trial point on every BFGS step;
   # cache the (fused) C++ call so each point is only evaluated once
   cache <- new.env(parent = emptyenv())
-  evaluate <- function(beta) {
-    if (is.null(cache$beta) || !identical(beta, cache$beta)) {
-      cache$result <- rp_negloglik_grad_cpp(beta, X, dX, Xentry, has_entry, log_time, status_num, scale_code)
-      cache$beta <- beta
+  evaluate <- function(gamma) {
+    if (is.null(cache$gamma) || !identical(gamma, cache$gamma)) {
+      cache$result <- rp_negloglik_grad_cpp(gamma, Z, dZ, Zentry, has_entry, log_time, status_num, scale_code)
+      cache$gamma <- gamma
     }
     cache$result
   }
-  negloglik <- function(beta) evaluate(beta)$value
-  gradient  <- function(beta) evaluate(beta)$gradient
+  negloglik <- function(gamma) evaluate(gamma)$value
+  gradient  <- function(gamma) evaluate(gamma)$gradient
 
   opt_control <- utils::modifyList(list(maxit = 500, reltol = 1e-10), control)
-  fit <- stats::optim(beta0, negloglik, gradient, method = "BFGS",
+  fit <- stats::optim(gamma0, negloglik, gradient, method = "BFGS",
                        control = opt_control, hessian = TRUE)
 
-  vcov <- tryCatch(solve(fit$hessian), error = function(e) {
+  # Hessian of the analytic gradient (central differences) in the working
+  # parameterisation, mapped back exactly: Var(beta) = T Var(gamma) T'.
+  hess <- (fit$hessian + t(fit$hessian)) / 2
+  vcov <- tryCatch(Tm %*% solve(hess) %*% t(Tm), error = function(e) {
     warning("Hessian not invertible; standard errors unavailable", call. = FALSE)
     matrix(NA_real_, p, p)
   })
+  vcov <- (vcov + t(vcov)) / 2
+  beta <- drop(Tm %*% fit$par)
 
   structure(
     list(
-      coefficients = stats::setNames(fit$par, colnames(X)),
+      coefficients = stats::setNames(beta, colnames(X)),
       vcov = `dimnames<-`(vcov, list(colnames(X), colnames(X))),
       loglik = -fit$value,
       n = length(time),
@@ -257,4 +288,21 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
     ),
     class = "rpsurv"
   )
+}
+
+# Linear reparameterisation beta = T gamma used during optimisation: T is
+# sqrt(n) R^{-1} from the QR decomposition of X, so X %*% T has orthogonal
+# columns with unit mean square. If X is numerically rank deficient (the
+# model is then not identified anyway), fall back to scaling each column by
+# its largest absolute value, which is always invertible.
+#' @keywords internal
+rp_reparam <- function(X) {
+  p <- ncol(X)
+  q <- qr(X)
+  if (q$rank == p) {
+    return(backsolve(qr.R(q), diag(p))[order(q$pivot), , drop = FALSE] * sqrt(nrow(X)))
+  }
+  s <- apply(abs(X), 2L, max)
+  s[!is.finite(s) | s == 0] <- 1
+  diag(1 / s, nrow = p)
 }

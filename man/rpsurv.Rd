@@ -59,7 +59,10 @@ covariate. Default 3.}
 \item{scale}{one of \code{"hazard"} (proportional hazards, the Royston-Parmar
 default), \code{"odds"} (proportional odds) or \code{"normal"} (probit).}
 
-\item{control}{list of control parameters passed to \code{\link[stats:optim]{stats::optim()}}.}
+\item{control}{list of control parameters passed to \code{\link[stats:optim]{stats::optim()}}.
+The optimisation runs on an internal orthogonalised parameterisation
+(see Details), so parameter-scale settings such as \code{parscale} or
+\code{ndeps} refer to that parameterisation.}
 }
 \value{
 an object of class \code{"rpsurv"}.
@@ -89,5 +92,16 @@ with the covariate's own \emph{value}. Each has its own argument and spline
 degrees of freedom, so the two components are fitted, reported, and
 extracted separately: \code{\link[=tvecurve]{tvecurve()}} returns beta(t) and \code{\link[=nlecurve]{nlecurve()}}
 returns g(x) - g(ref).
+}
+
+\section{Estimation}{
+The log-likelihood and its analytic gradient are maximised with BFGS
+over a linear reparameterisation of the coefficients in which the design
+matrix has orthogonal, unit-scale columns (from its QR decomposition).
+This keeps the problem well conditioned when covariates on large scales
+multiply the time spline basis in \code{tve} terms. The Hessian is obtained by
+central differences of the analytic gradient in that parameterisation,
+and the coefficients and their variance-covariance matrix are mapped
+back exactly to the scale of the original design.
 }
 
