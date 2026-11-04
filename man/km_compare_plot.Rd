@@ -4,27 +4,72 @@
 \alias{km_compare_plot}
 \title{Compare the fitted survival curve against the Kaplan-Meier estimate}
 \usage{
-km_compare_plot(object, by = NULL, col = c("black", "red"), ...)
+km_compare_plot(
+  object,
+  by = NULL,
+  col = NULL,
+  n_grid = 200,
+  legend = TRUE,
+  ...
+)
 }
 \arguments{
 \item{object}{a fitted \code{"rpsurv"} object.}
 
-\item{by}{optional name of a covariate in the fitted data to stratify by
-(each level gets its own KM curve and predicted curve, at that level's
-mean of the other covariates).}
+\item{by}{optional grouping: the name of a variable of the model
+formula, or a vector with one value per observation used in the fit
+(rows with missing values dropped), for example \code{cut(age, 3)}. At most
+10 groups. Each group gets its Kaplan-Meier curve and its own model
+curve, averaged over the subjects of that group.}
 
-\item{col}{colours for KM (solid step) vs model (dashed) curves.}
+\item{col}{colours. Without \code{by}, two colours for the Kaplan-Meier and the
+model curve (default black and red); with \code{by}, one colour per group
+(both curves of a group share it and differ by line type).}
+
+\item{n_grid}{number of time points at which the model curve is
+evaluated, from 0 to the last follow-up time.}
+
+\item{legend}{\code{TRUE} (default; the legend goes in the plot corner the
+curves cross least), \code{FALSE} for none, or a position keyword accepted
+by \code{\link[graphics:legend]{graphics::legend()}}.}
 
 \item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
 }
 \value{
-No return value, called for its side effect of drawing the
-Kaplan-Meier versus fitted-survival comparison plot.
+Called for its side effect of drawing the comparison plot.
+Invisibly returns a \code{data.frame} with columns \code{group}, \code{curve}
+(\code{"km"} or \code{"model"}), \code{time} and \code{surv}, the plotted coordinates.
 }
 \description{
-A calibration / goodness-of-fit diagnostic: overlays the model-predicted
-survival curve on the nonparametric Kaplan-Meier estimate, optionally by
-strata of a categorical covariate. Close agreement supports the chosen
-spline df and scale; systematic divergence suggests more baseline df,
-a different \code{scale}, or a \code{tve} term is needed.
+A calibration / goodness-of-fit diagnostic: overlays the model-based
+survival curve on the nonparametric Kaplan-Meier estimate, overall or by
+groups of a covariate. Close agreement supports the chosen spline df and
+scale; systematic divergence suggests more baseline df, a different
+\code{scale}, or a \code{tve} term is needed.
+}
+\details{
+The Kaplan-Meier curve estimates the marginal survival of the group, so
+the model curve is the matching population-averaged (direct-adjusted)
+estimand, not the survival curve at the mean covariate profile (which is
+a different, generally higher or lower, curve when covariates vary):
+\itemize{
+\item Right-censored data: the mean over the group's subjects of their
+predicted survival curves, \verb{mean_i S(t | x_i)}. Kaplan-Meier estimates
+the same curve when censoring does not depend on the covariates; when
+it does, the two can differ slightly even for a correct model.
+\item Counting-process data (\code{Surv(start, stop, status)}, left truncation or
+time-varying covariates): the Kaplan-Meier curve is then a product of
+conditional survival over the rows at risk, so the model curve is
+\code{exp(-A(t))}, where \code{A} cumulates the average model hazard of the rows
+at risk at each time (the model counterpart of the Nelson-Aalen
+estimator, computed on a fine time grid). A mean of \code{S(t | x_i)} from
+time 0 would not be comparable, because subjects enter the sample only
+after surviving to their entry time.
+}
+}
+\examples{
+\donttest{
+fit <- rpsurv(survival::Surv(time, status) ~ trt + celltype, data = veteran)
+km_compare_plot(fit, by = "celltype")
+}
 }

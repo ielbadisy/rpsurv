@@ -159,14 +159,30 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
   log_entry_safe <- log(log_entry_safe)
 
   cov_terms <- attr(stats::terms(formula), "term.labels")
+  cov_tt <- NULL
+  xlevels <- NULL
+  contrasts <- NULL
+  cov_vars <- NULL
   if (length(cov_terms)) {
     # Build the covariate columns with an intercept and then drop it, so a
     # factor is coded by treatment contrasts (k - 1 columns). Without the
     # intercept, model.matrix() returns all k indicator columns of the first
-    # factor, which are collinear with the model's own intercept.
-    mm <- stats::model.matrix(stats::reformulate(cov_terms), mf)
+    # factor, which are collinear with the model's own intercept. The terms
+    # (with their predvars), factor levels and contrasts are kept so that
+    # new data given on the original variables is coded the same way.
+    cov_tt <- stats::delete.response(stats::terms(mf))
+    attr(cov_tt, "intercept") <- 1L
+    mm <- stats::model.matrix(cov_tt, mf)
+    xlevels <- stats::.getXlevels(cov_tt, mf)
+    contrasts <- attr(mm, "contrasts")
     cov_data <- as.data.frame(mm[, colnames(mm) != "(Intercept)", drop = FALSE],
                               optional = TRUE)
+    cov_vars <- tryCatch({
+      v <- stats::get_all_vars(cov_tt, data)
+      na_rows <- attr(mf, "na.action")
+      if (length(na_rows)) v <- v[-as.integer(na_rows), , drop = FALSE]
+      if (nrow(v) == nrow(cov_data)) v else NULL
+    }, error = function(e) NULL)
   } else {
     cov_data <- data.frame(row.names = seq_along(time))[FALSE, , drop = FALSE]
     cov_data <- cov_data[seq_along(time), , drop = FALSE]
@@ -175,14 +191,16 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
   if (!is.null(tve)) {
     missing_tve <- setdiff(tve, names(cov_data))
     if (length(missing_tve)) {
-      stop("`tve` variable(s) not found among covariates: ", paste(missing_tve, collapse = ", "), call. = FALSE)
+      stop("`tve` variable(s) not found among covariates: ", paste(missing_tve, collapse = ", "),
+           rp_factor_hint(missing_tve, names(cov_data), xlevels), call. = FALSE)
     }
   }
 
   if (!is.null(nle)) {
     missing_nle <- setdiff(nle, names(cov_data))
     if (length(missing_nle)) {
-      stop("`nle` variable(s) not found among numeric covariates: ", paste(missing_nle, collapse = ", "), call. = FALSE)
+      stop("`nle` variable(s) not found among numeric covariates: ", paste(missing_nle, collapse = ", "),
+           rp_factor_hint(missing_nle, names(cov_data), xlevels), call. = FALSE)
     }
     if (anyDuplicated(nle)) stop("`nle` must not contain duplicates", call. = FALSE)
   }
@@ -311,12 +329,26 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
       status = status,
       log_time = log_time,
       cov_data = cov_data,
+      cov_terms = cov_tt,
+      xlevels = xlevels,
+      contrasts = contrasts,
+      cov_vars = cov_vars,
       X = X,
       dX = dX,
       Xentry = Xentry
     ),
     class = "rpsurv"
   )
+}
+
+# For a `tve` / `nle` name that is a factor, list its design columns.
+#' @keywords internal
+rp_factor_hint <- function(missing, cols, xlevels) {
+  f <- intersect(missing, names(xlevels))
+  if (!length(f)) return("")
+  cand <- unlist(lapply(f, function(v) cols[startsWith(cols, v)]))
+  paste0(". A factor enters the model through its treatment-contrast indicator column(s); name those instead: ",
+         paste(cand, collapse = ", "))
 }
 
 # Warn when the design matrix is numerically rank deficient: the model is

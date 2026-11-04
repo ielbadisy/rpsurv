@@ -2,6 +2,27 @@ rp_effect_label <- function(scale) {
   switch(scale, hazard = "Hazard ratio", odds = "Odds ratio", normal = "Probit effect")
 }
 
+# Default y label of plot.tvecurve(): what tvecurve() returned, on which scale.
+#' @keywords internal
+rp_tve_label <- function(x, exp) {
+  var <- attr(x, "var")
+  scale <- attr(x, "scale")
+  if (is.null(scale)) scale <- "hazard"
+  if (identical(attr(x, "type"), "link")) {
+    lab <- switch(scale,
+      hazard = c("Log cumulative hazard ratio", "Cumulative hazard ratio"),
+      odds = c("Log cumulative odds ratio", "Cumulative odds ratio"),
+      normal = c("Probit-scale effect", "exp(probit-scale effect)")
+    )[1L + exp]
+    paste0("beta(t): ", tolower(substr(lab, 1, 1)), substring(lab, 2), " per unit of ", var)
+  } else {
+    ref <- attr(x, "ref")
+    if (is.null(ref)) ref <- 0
+    paste0(if (exp) "Hazard ratio" else "Log hazard ratio", ", ", var, " = ",
+           signif(ref + 1, 4), " vs ", signif(ref, 4))
+  }
+}
+
 rp_plot_effect <- function(xv, d, exp, ci, log, col, ref.line, add, xlab, ylab, ...) {
   tr <- if (exp) base::exp else identity
   est <- tr(d$est)
@@ -28,9 +49,20 @@ rp_plot_effect <- function(xv, d, exp, ci, log, col, ref.line, add, xlab, ylab, 
 #' confidence band and a reference line at no effect.
 #'
 #' @param x a `"tvecurve"` object returned by [tvecurve()].
-#' @param exp logical; exponentiate the estimate and band (hazard ratio
-#'   instead of log hazard ratio). Defaults to `TRUE` for `type = "hr"` and
-#'   `FALSE` for `type = "link"`.
+#' @param exp logical; exponentiate the estimate and band. Defaults to
+#'   `TRUE` for `type = "hr"` (a hazard ratio on every model scale, since
+#'   [tvecurve()] computes it from the fitted hazards) and `FALSE` for
+#'   `type = "link"`.
+#' @details The default y label states what is drawn. For `type = "hr"` it
+#'   is the hazard ratio of `var = ref + 1` versus `var = ref` (other
+#'   covariates at 0). It is not a ratio "per unit" of `var`: with a
+#'   time-varying effect the derivative of the linear predictor depends on
+#'   `var`, so the hazard ratio changes with `ref`, and off the hazard scale
+#'   it also depends on the other covariates. For `type = "link"` it is beta(t), the effect per unit of `var`
+#'   on the model scale: a log cumulative hazard ratio (`scale = "hazard"`),
+#'   a log cumulative odds ratio (`"odds"`), or a shift of the probit of the
+#'   failure probability (`"normal"`); exponentiated, the first two are a
+#'   cumulative hazard ratio and a cumulative odds ratio.
 #' @param ci logical; draw the confidence band when available.
 #' @param log passed to [graphics::plot()]; `"y"` (log y axis) when `exp`
 #'   is `TRUE`, `""` otherwise.
@@ -50,14 +82,7 @@ rp_plot_effect <- function(xv, d, exp, ci, log, col, ref.line, add, xlab, ylab, 
 plot.tvecurve <- function(x, exp = attr(x, "type") != "link", ci = TRUE,
                           log = if (exp) "y" else "", col = 1, ref.line = TRUE,
                           add = FALSE, xlab = "Time", ylab = NULL, ...) {
-  if (is.null(ylab)) {
-    var <- attr(x, "var")
-    ylab <- if (identical(attr(x, "type"), "link")) {
-      paste0("beta(t) for ", var)
-    } else {
-      paste0(if (exp) "Hazard ratio" else "Log hazard ratio", " per unit of ", var)
-    }
-  }
+  if (is.null(ylab)) ylab <- rp_tve_label(x, exp)
   rp_plot_effect(x$time, x, exp, ci, log, col, ref.line, add, xlab, ylab, ...)
   invisible(x)
 }

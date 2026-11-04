@@ -17,7 +17,13 @@
 \arguments{
 \item{object}{a fitted \code{"rpsurv"} object.}
 
-\item{newdata}{a data frame of covariate values, one row per subject.
+\item{newdata}{a data frame of covariate values, one row per subject,
+on the original variables of the model formula: factors (or character
+values) by their levels, numeric variables untransformed, as for
+\code{\link[survival:coxph]{survival::coxph()}}. Factor levels not seen when fitting give an
+error. A data frame holding the design columns instead (for example
+\code{celltypeadeno} for the treatment-contrast indicator of a factor
+\code{celltype}) is also accepted.
 Defaults to the covariate values used to fit the model. For
 \code{type \%in\% c("hr", "sdiff")}, this is the \emph{numerator}/contrast
 covariate profile.}

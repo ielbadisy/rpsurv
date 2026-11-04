@@ -115,10 +115,57 @@ rp_check_output <- function(est, se = NULL, V = NULL, deta = NULL) {
   invisible(NULL)
 }
 
+# Covariate design columns (object$cov_data layout) for new data. `newdata`
+# is normally given on the original variables of the formula (factors or
+# character levels, untransformed numeric variables) and is coded through
+# the fitted terms, factor levels and contrasts, as in predict.lm(). For
+# backward compatibility, data that already holds the design columns (for
+# example `celltypeadeno`) is used as is.
+#' @keywords internal
+rp_newdata_cov <- function(object, newdata, arg = "newdata") {
+  newdata <- as.data.frame(newdata)
+  cn <- colnames(object$cov_data)
+  if (!length(cn)) return(newdata[, character(0), drop = FALSE])
+  tt <- object$cov_terms
+  vars <- if (is.null(tt)) cn else all.vars(tt)
+  if (!is.null(tt) && all(vars %in% names(newdata))) {
+    for (v in intersect(names(object$xlevels), names(newdata))) {
+      x <- newdata[[v]]
+      bad <- setdiff(unique(as.character(x[!is.na(x)])), object$xlevels[[v]])
+      if (length(bad)) {
+        stop(sprintf("`%s` has level(s) of %s not seen when fitting: %s (fitted levels: %s)",
+                     arg, v, paste(bad, collapse = ", "),
+                     paste(object$xlevels[[v]], collapse = ", ")), call. = FALSE)
+      }
+    }
+    mm <- tryCatch({
+      mf <- stats::model.frame(tt, newdata, na.action = stats::na.pass, xlev = object$xlevels)
+      if (!is.null(cl <- attr(tt, "dataClasses"))) stats::.checkMFClasses(cl, mf)
+      stats::model.matrix(tt, mf, contrasts.arg = object$contrasts)
+    }, error = function(e) {
+      stop("`", arg, "` could not be coded like the fitted data: ", conditionMessage(e), call. = FALSE)
+    })
+    if (!all(cn %in% colnames(mm)) || nrow(mm) != nrow(newdata)) {
+      stop("`", arg, "` could not be coded like the fitted data (design columns ",
+           paste(setdiff(cn, colnames(mm)), collapse = ", "), " missing)", call. = FALSE)
+    }
+    return(as.data.frame(mm[, cn, drop = FALSE], optional = TRUE))
+  }
+  if (all(cn %in% names(newdata))) return(newdata[, cn, drop = FALSE])
+  stop("`", arg, "` is missing covariate(s): ",
+       paste(setdiff(vars, names(newdata)), collapse = ", "), call. = FALSE)
+}
+
 #' Predict from a fitted Royston-Parmar model
 #'
 #' @param object a fitted `"rpsurv"` object.
-#' @param newdata a data frame of covariate values, one row per subject.
+#' @param newdata a data frame of covariate values, one row per subject,
+#'   on the original variables of the model formula: factors (or character
+#'   values) by their levels, numeric variables untransformed, as for
+#'   [survival::coxph()]. Factor levels not seen when fitting give an
+#'   error. A data frame holding the design columns instead (for example
+#'   `celltypeadeno` for the treatment-contrast indicator of a factor
+#'   `celltype`) is also accepted.
 #'   Defaults to the covariate values used to fit the model. For
 #'   `type %in% c("hr", "sdiff")`, this is the *numerator*/contrast
 #'   covariate profile.
@@ -190,8 +237,8 @@ predict.rpsurv <- function(object, newdata = NULL, newdata0 = NULL, times = NULL
       stop("`type = \"", type, "\"` requires both `newdata` (contrast profile) and ",
            "`newdata0` (reference profile).", call. = FALSE)
     }
-    newdata <- as.data.frame(newdata)
-    newdata0 <- as.data.frame(newdata0)
+    newdata <- rp_newdata_cov(object, newdata, "newdata")
+    newdata0 <- rp_newdata_cov(object, newdata0, "newdata0")
     if (nrow(newdata) != nrow(newdata0)) {
       stop("`newdata` and `newdata0` must have the same number of rows.", call. = FALSE)
     }
@@ -235,12 +282,7 @@ predict.rpsurv <- function(object, newdata = NULL, newdata0 = NULL, times = NULL
     return(res)
   }
 
-  if (is.null(newdata)) newdata <- object$cov_data
-  newdata <- as.data.frame(newdata)
-  if (ncol(object$cov_data) && !all(colnames(object$cov_data) %in% colnames(newdata))) {
-    stop("`newdata` is missing covariate(s): ",
-         paste(setdiff(colnames(object$cov_data), colnames(newdata)), collapse = ", "), call. = FALSE)
-  }
+  newdata <- if (is.null(newdata)) object$cov_data else rp_newdata_cov(object, newdata)
 
   results <- vector("list", nrow(newdata))
   for (i in seq_len(nrow(newdata))) {
@@ -297,7 +339,8 @@ predict.rpsurv <- function(object, newdata = NULL, newdata0 = NULL, times = NULL
 #' optional delta-method standard error and 95% confidence interval.
 #'
 #' @param object a fitted `"rpsurv"` object.
-#' @param newdata a one-row data frame, the contrast covariate profile.
+#' @param newdata a one-row data frame, the contrast covariate profile
+#'   (on the original variables, as in [predict.rpsurv()]).
 #' @param newdata0 a one-row data frame, the reference covariate profile.
 #' @param tau numeric restriction time.
 #' @param se.fit logical; if `TRUE`, adds a delta-method standard error
@@ -331,8 +374,8 @@ rmst_diff <- function(object, newdata, newdata0, tau, se.fit = FALSE, n_grid = 2
   grid[1] <- max(grid[1], .Machine$double.eps) # avoid log(0) in the design
   log_grid <- log(grid)
 
-  cov1 <- newdata[1, colnames(object$cov_data), drop = FALSE]
-  cov0 <- newdata0[1, colnames(object$cov_data), drop = FALSE]
+  cov1 <- rp_newdata_cov(object, newdata, "newdata")[1, , drop = FALSE]
+  cov0 <- rp_newdata_cov(object, newdata0, "newdata0")[1, , drop = FALSE]
   d1 <- rp_predict_design(object, cov1, log_grid)
   d0 <- rp_predict_design(object, cov0, log_grid)
   sdiff <- d1$S - d0$S

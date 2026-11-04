@@ -9,7 +9,8 @@ rmst_diff(object, newdata, newdata0, tau, se.fit = FALSE, n_grid = 200)
 \arguments{
 \item{object}{a fitted \code{"rpsurv"} object.}
 
-\item{newdata}{a one-row data frame, the contrast covariate profile.}
+\item{newdata}{a one-row data frame, the contrast covariate profile
+(on the original variables, as in \code{\link[=predict.rpsurv]{predict.rpsurv()}}).}
 
 \item{newdata0}{a one-row data frame, the reference covariate profile.}
 

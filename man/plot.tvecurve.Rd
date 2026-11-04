@@ -20,9 +20,10 @@
 \arguments{
 \item{x}{a \code{"tvecurve"} object returned by \code{\link[=tvecurve]{tvecurve()}}.}
 
-\item{exp}{logical; exponentiate the estimate and band (hazard ratio
-instead of log hazard ratio). Defaults to \code{TRUE} for \code{type = "hr"} and
-\code{FALSE} for \code{type = "link"}.}
+\item{exp}{logical; exponentiate the estimate and band. Defaults to
+\code{TRUE} for \code{type = "hr"} (a hazard ratio on every model scale, since
+\code{\link[=tvecurve]{tvecurve()}} computes it from the fitted hazards) and \code{FALSE} for
+\code{type = "link"}.}
 
 \item{ci}{logical; draw the confidence band when available.}
 
@@ -45,6 +46,18 @@ Called for its side effect. Invisibly returns \code{x}.
 \description{
 Draws the output of \code{\link[=tvecurve]{tvecurve()}}: the effect against time, with its 95\%
 confidence band and a reference line at no effect.
+}
+\details{
+The default y label states what is drawn. For \code{type = "hr"} it
+is the hazard ratio of \code{var = ref + 1} versus \code{var = ref} (other
+covariates at 0). It is not a ratio "per unit" of \code{var}: with a
+time-varying effect the derivative of the linear predictor depends on
+\code{var}, so the hazard ratio changes with \code{ref}, and off the hazard scale
+it also depends on the other covariates. For \code{type = "link"} it is beta(t), the effect per unit of \code{var}
+on the model scale: a log cumulative hazard ratio (\code{scale = "hazard"}),
+a log cumulative odds ratio (\code{"odds"}), or a shift of the probit of the
+failure probability (\code{"normal"}); exponentiated, the first two are a
+cumulative hazard ratio and a cumulative odds ratio.
 }
 \examples{
 \donttest{

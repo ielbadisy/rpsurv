@@ -9,16 +9,26 @@ coxsnell_plot(object, ...)
 \arguments{
 \item{object}{a fitted \code{"rpsurv"} object.}
 
-\item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
+\item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}. Both axes
+default to the same range starting at 0, so the reference line is the
+diagonal of the plot.}
 }
 \value{
 Called for its side effect of drawing the diagnostic plot.
 Invisibly returns a \code{data.frame} with columns \code{time} (the sorted
-Cox-Snell residuals) and \code{cumhaz} (their Nelson-Aalen cumulative
-hazard), the coordinates of the plotted step function.
+distinct Cox-Snell residuals) and \code{cumhaz} (their Nelson-Aalen
+cumulative hazard), the coordinates of the plotted step function.
 }
 \description{
 Plots the Nelson-Aalen cumulative hazard of the Cox-Snell residuals
-against the residuals themselves. A well-fitting model gives points
-scattered around the y = x line.
+against the residuals themselves. Under a correctly specified model the
+residuals are a censored sample from a unit exponential distribution,
+so the points should lie close to the y = x reference line.
+}
+\details{
+For counting-process data (\code{Surv(start, stop, status)}), each row's
+residual is \code{H(stop) - H(start)}. Given survival to \code{start}, it is unit
+exponential and censored at its observed value when the row has no
+event, so the same check applies row by row. Tied residuals are handled
+by the Nelson-Aalen estimator.
 }

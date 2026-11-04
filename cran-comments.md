@@ -13,6 +13,10 @@ This is a bug-fix release soon after 0.8.1. It fixes wrong results that
   on an orthogonalised reparameterisation and mapped back exactly.
 * `predict(type = "cumhaz", se.fit = TRUE)` returned swapped confidence
   limits.
+* `predict()` and the plot functions now accept factor covariates by
+  their levels in `newdata`; `km_compare_plot()` compared Kaplan-Meier
+  with the curve at the mean covariate profile instead of the average
+  predicted survival, and its `by` argument failed for factors.
 
 Fits are now validated against `rstpm2::stpm2()` in the tests
 (coefficients, full variance-covariance matrix, log-likelihood). Fitting

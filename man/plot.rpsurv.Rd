@@ -11,32 +11,51 @@
   times = NULL,
   ci = TRUE,
   col = NULL,
+  legend = NULL,
   ...
 )
 }
 \arguments{
 \item{x}{a fitted \code{"rpsurv"} object.}
 
-\item{newdata}{covariate profile(s) to plot, one row per curve. Defaults
-to a single profile at the mean of each covariate.}
+\item{newdata}{covariate profile(s) to plot, one row per curve, on the
+original variables of the model formula (see \code{\link[=predict.rpsurv]{predict.rpsurv()}}).
+Defaults to a single profile with each numeric variable at its mean
+and each factor, character or logical variable at its most common
+value in the fitted data.}
 
 \item{type}{one of \code{"survival"}, \code{"hazard"}, \code{"cumhaz"}.}
 
-\item{times}{times at which to evaluate the curve(s).}
+\item{times}{times at which to evaluate the curve(s). Defaults to 100
+points from the first event time to the last follow-up time, the range
+over which the model is estimated.}
 
-\item{ci}{logical; add a 95\% confidence band (ignored for \code{type = "hazard"}).}
+\item{ci}{logical; add a 95\% delta-method confidence band (pointwise).}
 
 \item{col}{colour(s), recycled over rows of \code{newdata}.}
 
-\item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
+\item{legend}{\code{TRUE}, \code{FALSE}, or a position keyword accepted by
+\code{\link[graphics:legend]{graphics::legend()}} for the legend identifying the curves, labelled
+by the \code{newdata} columns that differ between rows. By default a legend
+is drawn when there are several curves, in the plot corner that the
+curves cross least.}
+
+\item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}, such as
+\code{ylim} or \code{main}.}
 }
 \value{
 Called for its side effect of drawing the predicted curve(s).
 Invisibly returns the \code{data.frame} of predictions produced by
 \code{\link[=predict.rpsurv]{predict.rpsurv()}}, with columns \code{id} (row of \code{newdata}), \code{time},
-\code{est}, and, when \code{ci = TRUE} and \code{type != "hazard"}, \code{lower} and
-\code{upper} for the 95\% confidence band.
+\code{est}, and, when \code{ci = TRUE}, \code{lower} and \code{upper} for the 95\%
+confidence band. These are exactly the plotted values.
 }
 \description{
 Plot predicted curves from a Royston-Parmar model
+}
+\examples{
+\donttest{
+fit <- rpsurv(survival::Surv(time, status) ~ trt + celltype, data = veteran)
+plot(fit, newdata = data.frame(trt = 1, celltype = c("squamous", "adeno")))
+}
 }
