@@ -45,6 +45,11 @@
   when the variance-covariance matrix is unavailable, or when standard
   errors are `NaN` because it is not positive definite. `residuals()`
   warns about negative or non-finite Cox-Snell residuals.
+* New tests validate `nle` fits, alone and combined with `tve`, on the
+  hazard, odds and probit scales against `rstpm2::stpm2()` with the same
+  natural-spline model space (log-likelihood, coefficients and full
+  variance-covariance matrix), and check `nlecurve()` and `tvecurve()`
+  standard errors against a numerical delta method.
 
 # rpsurv 0.8.1
 
