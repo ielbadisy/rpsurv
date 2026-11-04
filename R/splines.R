@@ -33,7 +33,10 @@ rcs_basis <- function(x, knots, derivative = FALSE) {
 #' @param df degrees of freedom of the spline (number of interior knots + 1).
 #' @keywords internal
 default_knots <- function(x, df) {
-  if (df < 1L) stop("df must be >= 1", call. = FALSE)
+  if (length(df) != 1L || !is.finite(df) || df < 1 || df != round(df)) {
+    stop("df must be a single whole number >= 1", call. = FALSE)
+  }
+  df <- as.integer(df)
   nk <- df - 1L
   if (nk == 0L) {
     probs <- numeric(0)
@@ -53,7 +56,14 @@ default_knots <- function(x, df) {
     ), call. = FALSE)
     interior <- interior[!degenerate]
   }
-  interior <- unique(interior)
+  if (anyDuplicated(interior)) {
+    n_dup <- sum(duplicated(interior))
+    warning(sprintf(
+      "%d interior knot(s) coincide with another knot because of tied values; dropping them, effective spline df is %d instead of %d",
+      n_dup, df - sum(degenerate) - n_dup, df
+    ), call. = FALSE)
+    interior <- unique(interior)
+  }
 
   sort(c(kmin, interior, kmax))
 }

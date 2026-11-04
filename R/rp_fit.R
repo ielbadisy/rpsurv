@@ -17,11 +17,18 @@ rp_link_fun <- function(scale) {
 
 # Spline df for one term: a single value, or a vector named by covariate.
 rp_term_df <- function(df, var, arg) {
-  if (length(df) == 1L && is.null(names(df))) return(as.integer(df))
-  if (is.null(names(df)) || !var %in% names(df)) {
-    stop("`", arg, "` must be a single value or a vector named by covariate (missing ", var, ")", call. = FALSE)
+  if (length(df) == 1L && is.null(names(df))) {
+    k <- df
+  } else {
+    if (is.null(names(df)) || !var %in% names(df)) {
+      stop("`", arg, "` must be a single value or a vector named by covariate (missing ", var, ")", call. = FALSE)
+    }
+    k <- df[[var]]
   }
-  as.integer(df[[var]])
+  if (!is.numeric(k) || !is.finite(k) || k < 1 || k != round(k)) {
+    stop("`", arg, "` for ", var, " must be a whole number >= 1", call. = FALSE)
+  }
+  as.integer(k)
 }
 
 rp_start_values <- function(time, status, p, scale, max_n = 20000L) {
@@ -142,6 +149,7 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
     status <- resp[, 2L]
   }
   if (any(time <= 0)) stop("all exit times must be > 0", call. = FALSE)
+  if (!any(status == 1)) stop("no events in the data: the model cannot be fitted", call. = FALSE)
   if (any(entry < 0) || any(entry >= time)) stop("entry times must satisfy 0 <= start < stop", call. = FALSE)
   log_time <- log(time)
   has_entry <- as.numeric(entry > 0)
@@ -183,6 +191,12 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
     knots <- default_knots(log_time[status == 1], df)
   } else {
     knots <- sort(knots)
+    if (length(knots) < 2L || any(!is.finite(knots))) {
+      stop("`knots` must contain at least two finite values (the boundary knots)", call. = FALSE)
+    }
+    if (anyDuplicated(knots)) {
+      stop("`knots` must not contain duplicated values: a repeated knot gives an all-zero spline column", call. = FALSE)
+    }
   }
 
   tve_knots <- NULL
@@ -229,6 +243,7 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
   # tens times a cubic spline in log time make the Hessian so ill
   # conditioned that BFGS stops early and the finite-difference Hessian is
   # not positive definite.
+  rp_check_rank(X)
   Tm <- rp_reparam(X)
   Z <- X %*% Tm
   dZ <- dX %*% Tm
@@ -251,14 +266,21 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
   opt_control <- utils::modifyList(list(maxit = 500, reltol = 1e-10), control)
   fit <- stats::optim(gamma0, negloglik, gradient, method = "BFGS",
                        control = opt_control, hessian = TRUE)
+  if (fit$convergence != 0L) {
+    warning(sprintf(
+      "optim() did not converge (code %d%s): the estimates may not maximise the likelihood. Try a larger `control = list(maxit = )` or fewer spline df.",
+      fit$convergence, if (is.null(fit$message)) "" else paste0(", ", fit$message)
+    ), call. = FALSE)
+  }
+  if (fit$value >= 1e9) {
+    warning("at the final estimates the fitted cumulative hazard decreases over some observed follow-up (non-positive hazard at an event time, or survival increasing between entry and exit); the reported log-likelihood is a penalty value and the estimates are unreliable. Try fewer spline df.",
+            call. = FALSE)
+  }
 
   # Hessian of the analytic gradient (central differences) in the working
   # parameterisation, mapped back exactly: Var(beta) = T Var(gamma) T'.
   hess <- (fit$hessian + t(fit$hessian)) / 2
-  vcov <- tryCatch(Tm %*% solve(hess) %*% t(Tm), error = function(e) {
-    warning("Hessian not invertible; standard errors unavailable", call. = FALSE)
-    matrix(NA_real_, p, p)
-  })
+  vcov <- Tm %*% rp_invert_hessian(hess, if (fit$convergence == 0L) gradient(fit$par)) %*% t(Tm)
   vcov <- (vcov + t(vcov)) / 2
   beta <- drop(Tm %*% fit$par)
 
@@ -278,6 +300,7 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
       nle = nle,
       nle_knots = nle_knots,
       counting = counting,
+      na.action = attr(mf, "na.action"),
       formula = formula,
       call = match.call(),
       terms = stats::terms(formula),
@@ -294,6 +317,61 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
     ),
     class = "rpsurv"
   )
+}
+
+# Warn when the design matrix is numerically rank deficient: the model is
+# then not identified (aliased columns), and its estimates and standard
+# errors are not meaningful.
+#' @keywords internal
+rp_check_rank <- function(X) {
+  q <- qr(X)
+  if (q$rank < ncol(X)) {
+    aliased <- colnames(X)[q$pivot[seq.int(q$rank + 1L, ncol(X))]]
+    warning(sprintf(
+      "the design matrix is rank deficient (rank %d < %d parameters): the model is not identified. Aliased column(s): %s. Remove collinear or constant covariates, or reduce the spline df.",
+      q$rank, ncol(X), paste(aliased, collapse = ", ")
+    ), call. = FALSE)
+  }
+  invisible(q$rank)
+}
+
+# Invert the (working-scale) Hessian of the negative log-likelihood. A
+# Hessian that is not finite, not positive definite, or singular gives a
+# single clear warning; a gradient that is still far from zero at a positive
+# definite Hessian means the optimiser stopped short of the maximum. The
+# inverse is returned whenever it exists (so behaviour is unchanged apart
+# from the warning), and NA otherwise.
+#' @keywords internal
+rp_invert_hessian <- function(hess, grad = NULL) {
+  p <- ncol(hess)
+  na <- matrix(NA_real_, p, p)
+  if (any(!is.finite(hess))) {
+    warning("the Hessian of the log-likelihood has non-finite entries; standard errors are unavailable (NA)",
+            call. = FALSE)
+    return(na)
+  }
+  ev <- eigen(hess, symmetric = TRUE, only.values = TRUE)$values
+  inv <- tryCatch(solve(hess), error = function(e) NULL)
+  if (is.null(inv)) {
+    warning("the Hessian of the log-likelihood is singular, so the variance-covariance matrix does not exist; standard errors are unavailable (NA). The model is probably not identified: check for collinear or constant covariates, or reduce the spline df.",
+            call. = FALSE)
+    return(na)
+  }
+  if (min(ev) <= 0) {
+    warning(sprintf(
+      "the Hessian of the log-likelihood is not positive definite (smallest eigenvalue %.3g): the fit is not at a well-defined maximum, so the variance-covariance matrix is not positive definite and some standard errors are NaN or unreliable. Common causes are too many spline df for the number of events, or a fitted hazard close to zero over part of follow-up.",
+      min(ev)
+    ), call. = FALSE)
+  } else if (!is.null(grad) && all(is.finite(grad))) {
+    decrement <- sum(grad * (inv %*% grad)) / 2
+    if (decrement > 1e-3) {
+      warning(sprintf(
+        "the optimiser stopped before reaching a stationary point (a Newton step would still raise the log-likelihood by about %.3g); estimates and standard errors may be inaccurate. Try a larger `control = list(maxit = )` or a smaller `reltol`.",
+        decrement
+      ), call. = FALSE)
+    }
+  }
+  inv
 }
 
 # Linear reparameterisation beta = T gamma used during optimisation: T is

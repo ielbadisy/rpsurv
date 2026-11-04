@@ -35,6 +35,12 @@ confint.rpsurv <- function(object, parm, level = 0.95, ...) {
   out
 }
 
+# "(k observations deleted due to missingness)", as in print.coxph()
+rp_na_note <- function(na_action) {
+  k <- length(na_action)
+  if (k) sprintf(" (%d observation%s deleted due to missingness)", k, if (k > 1L) "s" else "") else ""
+}
+
 is_baseline_term <- function(object) {
   seq_along(object$coefficients) <= object$p_base
 }
@@ -48,7 +54,7 @@ print.rpsurv <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
       if (!is.null(x$tve)) paste0("  Time-varying effect: ", paste(x$tve, collapse = ", ")) else "",
       if (!is.null(x$nle)) paste0("  Non-linear effect: ", paste(x$nle, collapse = ", ")) else "", "\n")
   if (isTRUE(x$counting)) cat("Data: counting-process (left truncation / time-varying covariates)\n")
-  cat("n =", x$n, ", number of events =", x$nevent, "\n")
+  cat("n =", x$n, ", number of events =", x$nevent, rp_na_note(x$na.action), "\n")
   cat("Log-likelihood =", format(x$loglik, digits = digits),
       "  AIC =", format(AIC(x), digits = digits), "\n")
   invisible(x)
@@ -77,7 +83,8 @@ summary.rpsurv <- function(object, ...) {
       bic = BIC(object),
       tve = object$tve,
       nle = object$nle,
-      counting = object$counting
+      counting = object$counting,
+      na.action = object$na.action
     ),
     class = "summary.rpsurv"
   )
@@ -107,7 +114,8 @@ print.summary.rpsurv <- function(x, digits = max(3L, getOption("digits") - 3L),
   stats::printCoefmat(base_tab, digits = digits, signif.stars = FALSE,
                        P.values = TRUE, has.Pvalue = TRUE)
 
-  cat("\nn =", x$n, ", number of events =", x$nevent, ", parameters =", x$df, "\n")
+  cat("\nn =", x$n, ", number of events =", x$nevent, ", parameters =", x$df,
+      rp_na_note(x$na.action), "\n")
   cat("Log-likelihood =", format(x$loglik, digits = digits),
       "  AIC =", format(x$aic, digits = digits),
       "  BIC =", format(x$bic, digits = digits), "\n")

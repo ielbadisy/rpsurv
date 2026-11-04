@@ -23,6 +23,20 @@
   limits are now computed directly from the linear predictor, so they no
   longer overflow to `Inf` when the survival probability underflows to 0
   (also used by `residuals()`).
+* `rpsurv()` no longer fails silently. It now warns when `optim()` does
+  not converge (`convergence != 0`), when the optimiser stops short of a
+  stationary point, when the design matrix is rank deficient (naming the
+  aliased columns), when the Hessian is singular or not finite (standard
+  errors `NA`), when the Hessian is not positive definite (one warning; the
+  variance-covariance matrix is then not positive definite and some
+  standard errors are `NaN`), and when the final estimates sit on the
+  likelihood penalty for a decreasing cumulative hazard. Tied centiles
+  that merge spline knots now warn, like knots dropped at a boundary.
+* `rpsurv()` now stops with an informative error for data without events,
+  non-integer or non-positive `df`, `tve.df` or `nle.df` (previously
+  truncated silently), and duplicated user `knots`.
+* `print()` and `summary()` report observations dropped because of missing
+  values, as `print.coxph()` does.
 
 # rpsurv 0.8.1
 
