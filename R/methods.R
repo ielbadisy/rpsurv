@@ -21,10 +21,24 @@ AIC.rpsurv <- function(object, ..., k = 2) -2 * object$loglik + k * object$df
 #' @export
 BIC.rpsurv <- function(object, ...) -2 * object$loglik + log(object$nevent) * object$df
 
+# Standard errors from the vcov diagonal. A negative or non-finite variance
+# (non-positive-definite vcov, already reported by rpsurv()) gives NA plus
+# one clear warning instead of R's generic "NaNs produced".
+rp_coef_se <- function(object) {
+  v <- diag(object$vcov)
+  bad <- !is.finite(v) | v < 0
+  if (any(bad)) {
+    warning("Standard errors are NA for ", paste(names(object$coefficients)[bad], collapse = ", "),
+            ": the variance-covariance matrix is not positive definite.", call. = FALSE)
+    v[bad] <- NA_real_
+  }
+  sqrt(v)
+}
+
 #' @importFrom stats confint
 #' @export
 confint.rpsurv <- function(object, parm, level = 0.95, ...) {
-  se <- sqrt(diag(object$vcov))
+  se <- rp_coef_se(object)
   b <- object$coefficients
   if (missing(parm)) parm <- names(b)
   z <- stats::qnorm(1 - (1 - level) / 2)
@@ -62,7 +76,7 @@ print.rpsurv <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
 
 #' @export
 summary.rpsurv <- function(object, ...) {
-  se <- sqrt(diag(object$vcov))
+  se <- rp_coef_se(object)
   b <- object$coefficients
   z <- b / se
   p <- 2 * stats::pnorm(-abs(z))

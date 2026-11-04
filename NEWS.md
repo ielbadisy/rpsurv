@@ -1,5 +1,7 @@
 # rpsurv (development version)
 
+* `summary()` and `confint()` give NA standard errors with one clear warning when the vcov is not positive definite, instead of R's generic "NaNs produced".
+
 * Fixed non-positive-definite variance-covariance matrices (NaN standard
   errors, "NaNs produced" in `summary()`) for fits with a time-varying
   effect of a covariate on a large scale, e.g. `tve = "karno"` on

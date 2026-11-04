@@ -106,3 +106,15 @@ test_that("unusable standard errors are reported by predict and the effect curve
   dimnames(npd$vcov) <- dimnames(fit$vcov)
   expect_warning(tvecurve(npd, "karno", times = 10), "not positive definite")
 })
+
+test_that("summary() gives NA SEs with one clear warning for a non-PD vcov", {
+  fit <- rpsurv(survival::Surv(time, status) ~ trt + karno, data = veteran, df = 2)
+  fit$vcov[2, 2] <- -1
+  w <- character()
+  s <- withCallingHandlers(summary(fit), warning = function(cnd) {
+    w <<- c(w, conditionMessage(cnd)); invokeRestart("muffleWarning")
+  })
+  expect_length(w, 1L)
+  expect_match(w, "not positive definite")
+  expect_true(any(is.na(s$coefficients[, "se(coef)"])))
+})
