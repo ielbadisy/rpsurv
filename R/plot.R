@@ -1,4 +1,9 @@
-#' Plot predicted curves from a Royston-Parmar model
+#' Plot a Royston-Parmar model
+#'
+#' Draws predicted survival, hazard or cumulative hazard curves for
+#' covariate profiles, or one of the two goodness-of-fit diagnostics:
+#' `type = "coxsnell"` calls [coxsnell_plot()] and `type = "km"` calls
+#' [km_compare_plot()].
 #'
 #' @param x a fitted `"rpsurv"` object.
 #' @param newdata covariate profile(s) to plot, one row per curve, on the
@@ -6,7 +11,11 @@
 #'   Defaults to a single profile with each numeric variable at its mean
 #'   and each factor, character or logical variable at its most common
 #'   value in the fitted data.
-#' @param type one of `"survival"`, `"hazard"`, `"cumhaz"`.
+#' @param type one of `"survival"`, `"hazard"`, `"cumhaz"` (predicted
+#'   curves), `"coxsnell"` (Cox-Snell residual plot, see [coxsnell_plot()])
+#'   or `"km"` (Kaplan-Meier vs model, see [km_compare_plot()]). The
+#'   diagnostics use the fitted data, so `newdata`, `times` and `ci` do not
+#'   apply to them.
 #' @param times times at which to evaluate the curve(s). Defaults to 100
 #'   points from the first event time to the last follow-up time, the range
 #'   over which the model is estimated.
@@ -16,23 +25,46 @@
 #'   [graphics::legend()] for the legend identifying the curves, labelled
 #'   by the `newdata` columns that differ between rows. By default a legend
 #'   is drawn when there are several curves, in the plot corner that the
-#'   curves cross least.
+#'   curves cross least. For `type = "km"` the legend is drawn by default.
+#' @param by for `type = "km"` only: optional grouping, the name of a
+#'   variable of the model formula or a vector with one value per
+#'   observation used in the fit (see [km_compare_plot()]).
 #' @param ... further arguments passed to [graphics::plot()], such as
-#'   `ylim` or `main`.
-#' @return Called for its side effect of drawing the predicted curve(s).
-#'   Invisibly returns the `data.frame` of predictions produced by
-#'   [predict.rpsurv()], with columns `id` (row of `newdata`), `time`,
+#'   `ylim` or `main` (and `n_grid` for `type = "km"`).
+#' @return Called for its side effect of drawing the plot. For the
+#'   diagnostics, invisibly returns the value of [coxsnell_plot()] or
+#'   [km_compare_plot()]. For predicted curves, invisibly returns the
+#'   `data.frame` of predictions produced by [predict.rpsurv()], with columns `id` (row of `newdata`), `time`,
 #'   `est`, and, when `ci = TRUE`, `lower` and `upper` for the 95%
 #'   confidence band. These are exactly the plotted values.
 #' @examples
 #' \donttest{
 #' fit <- rpsurv(survival::Surv(time, status) ~ trt + celltype, data = veteran)
 #' plot(fit, newdata = data.frame(trt = 1, celltype = c("squamous", "adeno")))
+#' plot(fit, type = "coxsnell")
+#' plot(fit, type = "km", by = "celltype")
 #' }
 #' @export
-plot.rpsurv <- function(x, newdata = NULL, type = c("survival", "hazard", "cumhaz"),
-                         times = NULL, ci = TRUE, col = NULL, legend = NULL, ...) {
+plot.rpsurv <- function(x, newdata = NULL,
+                        type = c("survival", "hazard", "cumhaz", "coxsnell", "km"),
+                        times = NULL, ci = TRUE, col = NULL, legend = NULL, by = NULL, ...) {
   type <- match.arg(type)
+  if (type %in% c("coxsnell", "km")) {
+    unused <- c(newdata = !is.null(newdata), times = !is.null(times), ci = !missing(ci))
+    if (type == "coxsnell") unused <- c(unused, col = !is.null(col), legend = !is.null(legend))
+    if (any(unused)) {
+      stop("`", paste(names(unused)[unused], collapse = "`, `"), "` ",
+           if (sum(unused) > 1L) "do" else "does", " not apply to type = \"", type,
+           "\": the diagnostic uses the fitted data.", call. = FALSE)
+    }
+    if (type == "coxsnell") {
+      if (!is.null(by)) stop("`by` applies to type = \"km\" only.", call. = FALSE)
+      return(coxsnell_plot(x, ...))
+    }
+    return(km_compare_plot(x, by = by, col = col,
+                           legend = if (is.null(legend)) TRUE else legend, ...))
+  }
+  if (!is.null(by)) stop("`by` applies to type = \"km\" only.", call. = FALSE)
   if (is.null(newdata)) newdata <- rp_default_profile(x)
   newdata <- as.data.frame(newdata)
   n_curves <- max(1L, nrow(newdata))

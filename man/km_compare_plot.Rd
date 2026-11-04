@@ -45,7 +45,8 @@ A calibration / goodness-of-fit diagnostic: overlays the model-based
 survival curve on the nonparametric Kaplan-Meier estimate, overall or by
 groups of a covariate. Close agreement supports the chosen spline df and
 scale; systematic divergence suggests more baseline df, a different
-\code{scale}, or a \code{tve} term is needed.
+\code{scale}, or a \code{tve} term is needed. \code{plot(fit, type = "km")} draws the
+same plot.
 }
 \details{
 The Kaplan-Meier curve estimates the marginal survival of the group, so

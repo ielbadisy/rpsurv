@@ -41,6 +41,7 @@ residuals.rpsurv <- function(object, type = c("coxsnell", "martingale", "devianc
 #' against the residuals themselves. Under a correctly specified model the
 #' residuals are a censored sample from a unit exponential distribution,
 #' so the points should lie close to the y = x reference line.
+#' `plot(fit, type = "coxsnell")` draws the same plot.
 #'
 #' For counting-process data (`Surv(start, stop, status)`), each row's
 #' residual is `H(stop) - H(start)`. Given survival to `start`, it is unit
@@ -78,7 +79,8 @@ coxsnell_plot <- function(object, ...) {
 #' survival curve on the nonparametric Kaplan-Meier estimate, overall or by
 #' groups of a covariate. Close agreement supports the chosen spline df and
 #' scale; systematic divergence suggests more baseline df, a different
-#' `scale`, or a `tve` term is needed.
+#' `scale`, or a `tve` term is needed. `plot(fit, type = "km")` draws the
+#' same plot.
 #'
 #' The Kaplan-Meier curve estimates the marginal survival of the group, so
 #' the model curve is the matching population-averaged (direct-adjusted)

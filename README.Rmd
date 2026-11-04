@@ -181,17 +181,18 @@ par(op)
 
 ## Diagnostics
 
-`residuals()` gives Cox-Snell, martingale or deviance residuals.
-`coxsnell_plot()` draws the Nelson-Aalen cumulative hazard of the
-Cox-Snell residuals against the residuals: a well-fitting model follows
-the diagonal. `km_compare_plot()` overlays the Kaplan-Meier estimate
-(solid) on the model's average predicted survival over the same subjects
-(dashed), overall or by group:
+`residuals()` gives Cox-Snell, martingale or deviance residuals. The two
+goodness-of-fit plots are also `plot()` types. `type = "coxsnell"` draws
+the Nelson-Aalen cumulative hazard of the Cox-Snell residuals against the
+residuals: a well-fitting model follows the diagonal. `type = "km"`
+overlays the Kaplan-Meier estimate (solid) on the model's average
+predicted survival over the same subjects (dashed), overall or by group.
+They are the same plots as `coxsnell_plot()` and `km_compare_plot()`:
 
 ```{r diagnostics, fig.width = 9, fig.height = 4}
 op <- par(mfrow = c(1, 2))
-coxsnell_plot(fit, main = "Cox-Snell residuals")
-km_compare_plot(fit, by = "hormon", main = "Kaplan-Meier vs rpsurv")
+plot(fit, type = "coxsnell", main = "Cox-Snell residuals")
+plot(fit, type = "km", by = "hormon", main = "Kaplan-Meier vs rpsurv")
 par(op)
 ```
 

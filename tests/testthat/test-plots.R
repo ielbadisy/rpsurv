@@ -175,3 +175,16 @@ test_that("plot.tvecurve labels match what tvecurve() returns on each scale", {
                         normal = "probit-scale effect"))
   }
 })
+
+test_that("plot(type = 'coxsnell' / 'km') dispatches to the diagnostic plots", {
+  fit <- rpsurv(survival::Surv(time, status) ~ trt + celltype, data = veteran, df = 3)
+  pdf(NULL)
+  on.exit(grDevices::dev.off())
+  expect_identical(plot(fit, type = "coxsnell"), coxsnell_plot(fit))
+  expect_identical(plot(fit, type = "km", by = "celltype"), km_compare_plot(fit, by = "celltype"))
+  expect_identical(plot(fit, type = "km"), km_compare_plot(fit))
+  expect_error(plot(fit, type = "coxsnell", newdata = veteran[1, ]), "does not apply")
+  expect_error(plot(fit, type = "km", times = 1:10, ci = FALSE), "do not apply")
+  expect_error(plot(fit, type = "coxsnell", by = "celltype"), "type = \"km\" only")
+  expect_error(plot(fit, by = "celltype"), "type = \"km\" only")
+})

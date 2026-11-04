@@ -2,16 +2,17 @@
 % Please edit documentation in R/plot.R
 \name{plot.rpsurv}
 \alias{plot.rpsurv}
-\title{Plot predicted curves from a Royston-Parmar model}
+\title{Plot a Royston-Parmar model}
 \usage{
 \method{plot}{rpsurv}(
   x,
   newdata = NULL,
-  type = c("survival", "hazard", "cumhaz"),
+  type = c("survival", "hazard", "cumhaz", "coxsnell", "km"),
   times = NULL,
   ci = TRUE,
   col = NULL,
   legend = NULL,
+  by = NULL,
   ...
 )
 }
@@ -24,7 +25,11 @@ Defaults to a single profile with each numeric variable at its mean
 and each factor, character or logical variable at its most common
 value in the fitted data.}
 
-\item{type}{one of \code{"survival"}, \code{"hazard"}, \code{"cumhaz"}.}
+\item{type}{one of \code{"survival"}, \code{"hazard"}, \code{"cumhaz"} (predicted
+curves), \code{"coxsnell"} (Cox-Snell residual plot, see \code{\link[=coxsnell_plot]{coxsnell_plot()}})
+or \code{"km"} (Kaplan-Meier vs model, see \code{\link[=km_compare_plot]{km_compare_plot()}}). The
+diagnostics use the fitted data, so \code{newdata}, \code{times} and \code{ci} do not
+apply to them.}
 
 \item{times}{times at which to evaluate the curve(s). Defaults to 100
 points from the first event time to the last follow-up time, the range
@@ -38,24 +43,34 @@ over which the model is estimated.}
 \code{\link[graphics:legend]{graphics::legend()}} for the legend identifying the curves, labelled
 by the \code{newdata} columns that differ between rows. By default a legend
 is drawn when there are several curves, in the plot corner that the
-curves cross least.}
+curves cross least. For \code{type = "km"} the legend is drawn by default.}
+
+\item{by}{for \code{type = "km"} only: optional grouping, the name of a
+variable of the model formula or a vector with one value per
+observation used in the fit (see \code{\link[=km_compare_plot]{km_compare_plot()}}).}
 
 \item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}, such as
-\code{ylim} or \code{main}.}
+\code{ylim} or \code{main} (and \code{n_grid} for \code{type = "km"}).}
 }
 \value{
-Called for its side effect of drawing the predicted curve(s).
-Invisibly returns the \code{data.frame} of predictions produced by
-\code{\link[=predict.rpsurv]{predict.rpsurv()}}, with columns \code{id} (row of \code{newdata}), \code{time},
+Called for its side effect of drawing the plot. For the
+diagnostics, invisibly returns the value of \code{\link[=coxsnell_plot]{coxsnell_plot()}} or
+\code{\link[=km_compare_plot]{km_compare_plot()}}. For predicted curves, invisibly returns the
+\code{data.frame} of predictions produced by \code{\link[=predict.rpsurv]{predict.rpsurv()}}, with columns \code{id} (row of \code{newdata}), \code{time},
 \code{est}, and, when \code{ci = TRUE}, \code{lower} and \code{upper} for the 95\%
 confidence band. These are exactly the plotted values.
 }
 \description{
-Plot predicted curves from a Royston-Parmar model
+Draws predicted survival, hazard or cumulative hazard curves for
+covariate profiles, or one of the two goodness-of-fit diagnostics:
+\code{type = "coxsnell"} calls \code{\link[=coxsnell_plot]{coxsnell_plot()}} and \code{type = "km"} calls
+\code{\link[=km_compare_plot]{km_compare_plot()}}.
 }
 \examples{
 \donttest{
 fit <- rpsurv(survival::Surv(time, status) ~ trt + celltype, data = veteran)
 plot(fit, newdata = data.frame(trt = 1, celltype = c("squamous", "adeno")))
+plot(fit, type = "coxsnell")
+plot(fit, type = "km", by = "celltype")
 }
 }

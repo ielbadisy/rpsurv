@@ -24,6 +24,7 @@ Plots the Nelson-Aalen cumulative hazard of the Cox-Snell residuals
 against the residuals themselves. Under a correctly specified model the
 residuals are a censored sample from a unit exponential distribution,
 so the points should lie close to the y = x reference line.
+\code{plot(fit, type = "coxsnell")} draws the same plot.
 }
 \details{
 For counting-process data (\code{Surv(start, stop, status)}), each row's

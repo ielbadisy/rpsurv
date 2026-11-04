@@ -258,8 +258,11 @@ truncation (delayed entry) when the covariate values do not change.
 
 # Diagnostics
 
+The two goodness-of-fit plots are `plot()` types, like the predicted
+curves (`coxsnell_plot()` and `km_compare_plot()` draw the same plots):
+
 ```{r diagnostics, fig.cap = "Cox-Snell residual check: points should lie near the diagonal."}
-coxsnell_plot(fit)
+plot(fit, type = "coxsnell")
 ```
 
 ```{r deviance-resid}
@@ -267,14 +270,14 @@ dev_resid <- residuals(fit, type = "deviance")
 summary(dev_resid)
 ```
 
-`km_compare_plot()` overlays the model-based survival curve on the
+`plot(fit, type = "km")` overlays the model-based survival curve on the
 nonparametric Kaplan-Meier estimate, by strata of a covariate: a direct
 visual check of whether the chosen spline `df` and `scale` capture the
 data. The model curve is averaged over the subjects of each group, the
 same population-level quantity that Kaplan-Meier estimates:
 
 ```{r km-compare, fig.cap = "Model vs. Kaplan-Meier, by hormonal therapy status."}
-km_compare_plot(fit, by = "hormon")
+plot(fit, type = "km", by = "hormon")
 ```
 
 # Validation against rstpm2 and flexsurv {#validation}

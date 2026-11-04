@@ -1,5 +1,7 @@
 # rpsurv 0.8.2
 
+* `plot()` gains `type = "coxsnell"` and `type = "km"` (with a `by` argument), so every built-in plot goes through `plot()`. They draw the same plots as `coxsnell_plot()` and `km_compare_plot()`, which are kept. Arguments that do not apply to a diagnostic (`newdata`, `times`, `ci`) give an error rather than being ignored.
+
 * `summary()` no longer shows `exp(coef)` for the baseline spline terms: it has no interpretation, and a tiny `exp(intercept)` pushed the whole table into scientific notation. Tables follow the session's `digits` and `scipen` options; log-likelihood, AIC and BIC are printed with two decimals in `print()` and `summary()`.
 
 * `predict()`, `rmst_diff()`, `plot()` and the other functions taking
