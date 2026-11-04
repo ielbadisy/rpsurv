@@ -37,6 +37,14 @@
   truncated silently), and duplicated user `knots`.
 * `print()` and `summary()` report observations dropped because of missing
   values, as `print.coxph()` does.
+* `predict()`, `tvecurve()` and `rmst_diff()` now reject non-positive or
+  non-finite `times` / `tau` (time 0 previously gave `NaN` silently).
+  `predict()`, `tvecurve()`, `nlecurve()` and `rmst_diff()` warn once,
+  with the reason, when the fitted hazard is not positive at some
+  evaluation points (hazard-based estimates are then negative or `NaN`),
+  when the variance-covariance matrix is unavailable, or when standard
+  errors are `NaN` because it is not positive definite. `residuals()`
+  warns about negative or non-finite Cox-Snell residuals.
 
 # rpsurv 0.8.1
 

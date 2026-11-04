@@ -69,3 +69,40 @@ test_that("print and summary report observations dropped for missingness", {
   expect_output(print(fit), "5 observations deleted due to missingness")
   expect_output(print(summary(fit)), "5 observations deleted due to missingness")
 })
+
+test_that("non-positive times are rejected instead of giving NaN", {
+  fit <- rpsurv(survival::Surv(time, status) ~ trt + karno, data = veteran, tve = "karno")
+  expect_error(predict(fit, newdata = data.frame(trt = 1, karno = 60), times = c(0, 1)), "positive")
+  expect_error(tvecurve(fit, "karno", times = c(0, 1)), "positive")
+  expect_error(rmst_diff(fit, data.frame(trt = 1, karno = 60), data.frame(trt = 0, karno = 60),
+                         tau = -1), "positive")
+})
+
+test_that("a non-positive fitted hazard is reported by predict and tvecurve", {
+  fit <- rpsurv(survival::Surv(time, status) ~ trt + karno, data = veteran, tve = "karno")
+  bad <- fit
+  # make d(eta)/d(log t) negative everywhere for a karno of 100
+  bad$coefficients["karno:s(logt)1"] <- -1
+  expect_warning(predict(bad, newdata = data.frame(trt = 1, karno = 100), times = c(10, 100),
+                         type = "hazard"), "hazard is not positive")
+  expect_warning(predict(bad, newdata = data.frame(trt = 1, karno = 100),
+                         newdata0 = data.frame(trt = 1, karno = 50), times = c(10, 100),
+                         type = "hr"), "hazard is not positive")
+  expect_warning(tvecurve(bad, "karno", times = c(10, 100), ref = 50), "hazard is not positive")
+  expect_silent(predict(fit, newdata = data.frame(trt = 1, karno = 100), times = c(10, 100),
+                        type = "hazard", se.fit = TRUE))
+})
+
+test_that("unusable standard errors are reported by predict and the effect curves", {
+  fit <- rpsurv(survival::Surv(time, status) ~ trt + karno, data = veteran, tve = "karno",
+                nle = "karno")
+  na_fit <- fit
+  na_fit$vcov[] <- NA_real_
+  expect_warning(predict(na_fit, newdata = data.frame(trt = 1, karno = 60), times = 10,
+                         se.fit = TRUE), "unavailable")
+  expect_warning(nlecurve(na_fit, "karno", at = 70, ref = 50), "unavailable")
+  npd <- fit
+  npd$vcov <- -diag(diag(fit$vcov))
+  dimnames(npd$vcov) <- dimnames(fit$vcov)
+  expect_warning(tvecurve(npd, "karno", times = 10), "not positive definite")
+})

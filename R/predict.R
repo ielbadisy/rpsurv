@@ -49,9 +49,16 @@ rp_grad_surv <- function(d, scale) {
   )
 }
 
-# Quadratic-form SE, one value per row of `grad` (n_times x p matrix).
+# Quadratic-form SE, one value per row of `grad` (n_times x p matrix). A
+# negative quadratic form (possible only with a non-positive-definite vcov)
+# gives NaN without R's generic "NaNs produced"; rp_check_output() then
+# explains it.
 #' @keywords internal
-rp_delta_se <- function(grad, V) sqrt(rowSums((grad %*% V) * grad))
+rp_delta_se <- function(grad, V) {
+  q <- rowSums((grad %*% V) * grad)
+  q[!is.na(q) & q < 0] <- NaN
+  sqrt(q)
+}
 
 # Cumulative hazard -log S(eta), computed without underflow of S.
 #' @keywords internal
@@ -61,6 +68,51 @@ rp_cumhaz <- function(eta, scale) {
     odds = ifelse(eta > 0, eta + log1p(exp(-eta)), log1p(exp(eta))),
     normal = -stats::pnorm(eta, lower.tail = FALSE, log.p = TRUE)
   )
+}
+
+#' @keywords internal
+rp_check_times <- function(times, arg = "times") {
+  if (!is.numeric(times) || !length(times) || any(!is.finite(times)) || any(times <= 0)) {
+    stop("`", arg, "` must be positive, finite numbers (the model is defined on log time)", call. = FALSE)
+  }
+  invisible(times)
+}
+
+# Warn once, with the reason, when a prediction or effect curve contains
+# non-finite values. `deta` holds d(eta)/d(log t) for hazard-based outputs:
+# a non-positive value means the fitted hazard is not positive there.
+#' @keywords internal
+rp_check_output <- function(est, se = NULL, V = NULL, deta = NULL) {
+  n_haz <- if (is.null(deta)) 0L else sum(!is.na(deta) & deta <= 0)
+  if (n_haz) {
+    warning(sprintf(
+      "the fitted hazard is not positive at %d of %d evaluation point(s): the fitted cumulative hazard decreases there, typically when extrapolating beyond the observed follow-up. Hazard-based estimates there are negative, NaN or infinite.",
+      n_haz, length(deta)
+    ), call. = FALSE)
+  }
+  bad_est <- sum(is.nan(est) | is.infinite(est))
+  if (bad_est && !n_haz) {
+    warning(sprintf("%d estimate(s) are NaN or infinite (numerical overflow or underflow at extreme times or covariate values)",
+                    bad_est), call. = FALSE)
+  }
+  if (!is.null(se)) {
+    if (!is.null(V) && any(!is.finite(V))) {
+      warning("the variance-covariance matrix is unavailable (see the warning from rpsurv()); standard errors and confidence limits are NA",
+              call. = FALSE)
+    } else {
+      bad_se <- sum(is.nan(se) | is.infinite(se))
+      if (bad_se && !n_haz) {
+        warning(sprintf(
+          "%d standard error(s) are NaN or infinite%s",
+          bad_se,
+          if (!is.null(V) && min(eigen(V, symmetric = TRUE, only.values = TRUE)$values) < 0) {
+            " because the variance-covariance matrix is not positive definite (see the warning from rpsurv())"
+          } else ""
+        ), call. = FALSE)
+      }
+    }
+  }
+  invisible(NULL)
 }
 
 #' Predict from a fitted Royston-Parmar model
@@ -126,9 +178,12 @@ predict.rpsurv <- function(object, newdata = NULL, newdata0 = NULL, times = NULL
   if (is.null(times)) {
     times <- seq(min(object$time[object$status == 1]), max(object$time), length.out = 100)
   }
+  rp_check_times(times)
   log_times <- log(times)
   inv_link <- rp_inv_link(object$scale)
   V <- object$vcov
+  all_deta <- list()
+  all_se <- list()
 
   if (type %in% c("hr", "sdiff")) {
     if (is.null(newdata) || is.null(newdata0)) {
@@ -152,10 +207,12 @@ predict.rpsurv <- function(object, newdata = NULL, newdata0 = NULL, times = NULL
         h1 <- rp_hazard_from_design(d1, times, object$scale)
         h0 <- rp_hazard_from_design(d0, times, object$scale)
         est <- h1 / h0
+        all_deta[[i]] <- c(d1$deta, d0$deta)
         out <- data.frame(id = i, time = times, est = est)
         if (se.fit) {
           grad <- rp_grad_loghaz(d1, object$scale) - rp_grad_loghaz(d0, object$scale)
           se_log <- rp_delta_se(grad, V)
+          all_se[[i]] <- se_log
           out$lower <- est * exp(-z * se_log)
           out$upper <- est * exp(z * se_log)
         }
@@ -165,13 +222,17 @@ predict.rpsurv <- function(object, newdata = NULL, newdata0 = NULL, times = NULL
         if (se.fit) {
           grad <- rp_grad_surv(d1, object$scale) - rp_grad_surv(d0, object$scale)
           se_diff <- rp_delta_se(grad, V)
+          all_se[[i]] <- se_diff
           out$lower <- est - z * se_diff
           out$upper <- est + z * se_diff
         }
       }
       results[[i]] <- out
     }
-    return(do.call(rbind, results))
+    res <- do.call(rbind, results)
+    rp_check_output(res$est, if (se.fit) unlist(all_se), V,
+                    if (type == "hr") unlist(all_deta))
+    return(res)
   }
 
   if (is.null(newdata)) newdata <- object$cov_data
@@ -193,11 +254,13 @@ predict.rpsurv <- function(object, newdata = NULL, newdata0 = NULL, times = NULL
       cumhaz = rp_cumhaz(eta, object$scale),
       hazard = rp_hazard_from_design(d, times, object$scale)
     )
+    if (type == "hazard") all_deta[[i]] <- d$deta
 
     out <- data.frame(id = i, time = times, est = est)
 
     if (se.fit && type %in% c("survival", "cumhaz", "link")) {
       se_eta <- rp_delta_se(X, V)
+      all_se[[i]] <- se_eta
       lo_eta <- eta - z * se_eta
       hi_eta <- eta + z * se_eta
       if (type == "link") {
@@ -214,13 +277,17 @@ predict.rpsurv <- function(object, newdata = NULL, newdata0 = NULL, times = NULL
     } else if (se.fit && type == "hazard") {
       grad <- rp_grad_loghaz(d, object$scale)
       se_log <- rp_delta_se(grad, V)
+      all_se[[i]] <- se_log
       out$lower <- est * exp(-z * se_log)
       out$upper <- est * exp(z * se_log)
     }
     results[[i]] <- out
   }
 
-  do.call(rbind, results)
+  res <- do.call(rbind, results)
+  rp_check_output(res$est, if (se.fit) unlist(all_se), V,
+                  if (type == "hazard") unlist(all_deta))
+  res
 }
 
 #' Restricted mean survival time difference between two covariate profiles
@@ -254,6 +321,12 @@ predict.rpsurv <- function(object, newdata = NULL, newdata0 = NULL, times = NULL
 #' @export
 rmst_diff <- function(object, newdata, newdata0, tau, se.fit = FALSE, n_grid = 200) {
   stopifnot(inherits(object, "rpsurv"), nrow(newdata) == 1, nrow(newdata0) == 1)
+  if (!is.numeric(tau) || length(tau) != 1L || !is.finite(tau) || tau <= 0) {
+    stop("`tau` must be a single positive, finite number", call. = FALSE)
+  }
+  if (!is.numeric(n_grid) || length(n_grid) != 1L || n_grid < 2) {
+    stop("`n_grid` must be a single number >= 2", call. = FALSE)
+  }
   grid <- seq(0, tau, length.out = n_grid)
   grid[1] <- max(grid[1], .Machine$double.eps) # avoid log(0) in the design
   log_grid <- log(grid)
@@ -272,11 +345,12 @@ rmst_diff <- function(object, newdata, newdata0, tau, se.fit = FALSE, n_grid = 2
   if (se.fit) {
     grad <- rp_grad_surv(d1, object$scale) - rp_grad_surv(d0, object$scale)
     grad_w <- as.numeric(trapw %*% grad) # linear combination -> single gradient vector
-    se <- sqrt(as.numeric(grad_w %*% object$vcov %*% grad_w))
+    se <- rp_delta_se(matrix(grad_w, nrow = 1L), object$vcov)
     z <- stats::qnorm(0.975)
     out$se <- se
     out$lower <- est - z * se
     out$upper <- est + z * se
   }
+  rp_check_output(est, if (se.fit) out$se, object$vcov)
   out
 }

@@ -18,6 +18,13 @@ residuals.rpsurv <- function(object, type = c("coxsnell", "martingale", "devianc
     H <- H - object$has_entry * rp_cumhaz(eta_e, object$scale)
   }
   r <- H
+  n_bad <- sum(!is.finite(r) | r < 0)
+  if (n_bad) {
+    warning(sprintf(
+      "%d Cox-Snell residual(s) are negative or not finite: the fitted cumulative hazard is not increasing over those subjects' follow-up, so the model is invalid there",
+      n_bad
+    ), call. = FALSE)
+  }
 
   if (type == "coxsnell") return(r)
 

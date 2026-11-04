@@ -46,6 +46,7 @@ nlecurve <- function(object, var, at = NULL, ref = NULL, se.fit = TRUE) {
   out <- data.frame(x = at, est = est)
   if (se.fit) {
     se <- rp_delta_se(L, object$vcov[cols, cols, drop = FALSE])
+    rp_check_output(est, se, object$vcov[cols, cols, drop = FALSE])
     z <- stats::qnorm(0.975)
     out$se <- se
     out$lower <- est - z * se
@@ -100,6 +101,8 @@ tvecurve <- function(object, var, times = NULL, type = c("hr", "link"), ref = 0,
     ev <- object$time[object$status == 1]
     times <- seq(min(ev), max(ev), length.out = 50)
   }
+  rp_check_times(times)
+  deta <- NULL
   log_times <- log(times)
   b <- object$coefficients
   V <- object$vcov
@@ -132,7 +135,9 @@ tvecurve <- function(object, var, times = NULL, type = c("hr", "link"), ref = 0,
     grad <- rp_grad_loghaz(d1, object$scale) - rp_grad_loghaz(d0, object$scale)
     if (in_nle) grad[, nle_cols] <- 0
     se <- rp_delta_se(grad, V)
+    deta <- c(d1$deta, d0$deta)
   }
+  rp_check_output(est, if (se.fit) se, V, deta)
   out <- data.frame(time = times, est = est)
   if (se.fit) {
     z <- stats::qnorm(0.975)
