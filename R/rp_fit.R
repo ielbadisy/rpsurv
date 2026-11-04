@@ -152,7 +152,13 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
 
   cov_terms <- attr(stats::terms(formula), "term.labels")
   if (length(cov_terms)) {
-    cov_data <- as.data.frame(stats::model.matrix(stats::reformulate(cov_terms, intercept = FALSE), mf))
+    # Build the covariate columns with an intercept and then drop it, so a
+    # factor is coded by treatment contrasts (k - 1 columns). Without the
+    # intercept, model.matrix() returns all k indicator columns of the first
+    # factor, which are collinear with the model's own intercept.
+    mm <- stats::model.matrix(stats::reformulate(cov_terms), mf)
+    cov_data <- as.data.frame(mm[, colnames(mm) != "(Intercept)", drop = FALSE],
+                              optional = TRUE)
   } else {
     cov_data <- data.frame(row.names = seq_along(time))[FALSE, , drop = FALSE]
     cov_data <- cov_data[seq_along(time), , drop = FALSE]

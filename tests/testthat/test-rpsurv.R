@@ -299,3 +299,18 @@ test_that("tve fits match rstpm2::stpm2 in coefficients and full vcov", {
     expect_equal(unname(sqrt(diag(mapped$vcov))), unname(sqrt(diag(vcov(ref)))), tolerance = 1e-3)
   }
 })
+
+test_that("a factor covariate is coded by treatment contrasts and matches rstpm2::stpm2", {
+  fit <- rpsurv(survival::Surv(time, status) ~ celltype + karno, data = veteran)
+  expect_false("celltypesquamous" %in% names(coef(fit)))
+  expect_true(all(c("celltypesmallcell", "celltypeadeno", "celltypelarge") %in% names(coef(fit))))
+  expect_equal(qr(fit$X)$rank, ncol(fit$X))
+  expect_true(all(is.finite(sqrt(diag(vcov(fit))))))
+  skip_if_not_installed("rstpm2")
+  suppressPackageStartupMessages(library(rstpm2)) # stpm2() calls internal gsm() unqualified
+  ref <- rstpm2::stpm2(survival::Surv(time, status) ~ celltype + karno, data = veteran, df = 4)
+  mapped <- rp_in_stpm2_basis(fit, ref)
+  expect_equal(fit$loglik, -ref@min, tolerance = 1e-6)
+  expect_equal(unname(mapped$coef), unname(coef(ref)), tolerance = 1e-3)
+  expect_equal(unname(sqrt(diag(mapped$vcov))), unname(sqrt(diag(vcov(ref)))), tolerance = 1e-3)
+})

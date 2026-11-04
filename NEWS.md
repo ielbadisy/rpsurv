@@ -13,6 +13,11 @@
   fits could also be inaccurate. Point estimates are unchanged up to
   optimiser tolerance. Settings in `control` such as `parscale` now refer
   to the internal parameterisation.
+* Factor covariates are now coded by treatment contrasts (one column per
+  non-reference level). Previously the first factor in the formula got an
+  indicator column for every level, which is collinear with the model
+  intercept: the model was not identified and its standard errors were
+  NaN, without a warning. Factor fits now match `rstpm2::stpm2()`.
 
 # rpsurv 0.8.1
 
