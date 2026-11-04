@@ -329,3 +329,15 @@ test_that("cumulative hazard confidence limits are ordered and do not overflow",
     expect_equal(p$lower[p$time <= 300][ok], -log(s$upper[ok]), tolerance = 1e-8)
   }
 })
+
+test_that("summary() baseline table has no exp(coef) and prints without scientific notation", {
+  bc <- brcancer
+  bc$hormon <- as.numeric(bc$hormon)
+  fit <- rpsurv(survival::Surv(rectime, censrec) ~ hormon, data = bc, df = 4)
+  out <- capture.output(summary(fit))
+  base <- out[grep("^Baseline spline terms", out) + 1L]
+  expect_false(grepl("exp(coef)", base, fixed = TRUE))
+  expect_true(any(grepl("^\\(Intercept\\) +-19\\.5955 +3\\.2573", out)))
+  expect_true(any(grepl("Log-likelihood = -2606.47, AIC = 5224.94", out, fixed = TRUE)))
+  expect_true(any(grepl("n = 686, number of events = 299, parameters = 6", out, fixed = TRUE)))
+})

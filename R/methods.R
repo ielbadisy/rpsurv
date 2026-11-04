@@ -55,6 +55,10 @@ rp_na_note <- function(na_action) {
   if (k) sprintf(" (%d observation%s deleted due to missingness)", k, if (k > 1L) "s" else "") else ""
 }
 
+# Log-likelihood, AIC and BIC with two decimals, so models can be compared
+# and LR tests done by hand; format() keeps the session's digits and scipen.
+rp_fmt_fit <- function(v) format(round(v, 2), nsmall = 2)
+
 is_baseline_term <- function(object) {
   seq_along(object$coefficients) <= object$p_base
 }
@@ -64,13 +68,13 @@ print.rpsurv <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   cat("Royston-Parmar flexible parametric survival model\n")
   cat("Call:\n")
   print(x$call)
-  cat("\nScale:", x$scale, "  Baseline df:", x$p_base - 1L,
-      if (!is.null(x$tve)) paste0("  Time-varying effect: ", paste(x$tve, collapse = ", ")) else "",
-      if (!is.null(x$nle)) paste0("  Non-linear effect: ", paste(x$nle, collapse = ", ")) else "", "\n")
+  cat("\nScale: ", x$scale, "   Baseline df: ", x$p_base - 1L,
+      if (!is.null(x$tve)) paste0("   Time-varying effect: ", paste(x$tve, collapse = ", ")),
+      if (!is.null(x$nle)) paste0("   Non-linear effect: ", paste(x$nle, collapse = ", ")),
+      "\n", sep = "")
   if (isTRUE(x$counting)) cat("Data: counting-process (left truncation / time-varying covariates)\n")
-  cat("n =", x$n, ", number of events =", x$nevent, rp_na_note(x$na.action), "\n")
-  cat("Log-likelihood =", format(x$loglik, digits = digits),
-      "  AIC =", format(AIC(x), digits = digits), "\n")
+  cat("n = ", x$n, ", number of events = ", x$nevent, rp_na_note(x$na.action), "\n", sep = "")
+  cat("Log-likelihood = ", rp_fmt_fit(x$loglik), ", AIC = ", rp_fmt_fit(AIC(x)), "\n", sep = "")
   invisible(x)
 }
 
@@ -123,15 +127,16 @@ print.summary.rpsurv <- function(x, digits = max(3L, getOption("digits") - 3L),
     cat("\n(no covariates in the model)\n")
   }
 
-  base_tab <- x$coefficients[x$baseline, , drop = FALSE]
+  # exp() of a spline coefficient has no interpretation, and a tiny value
+  # such as exp(intercept) would push the whole table into scientific notation
+  base_tab <- x$coefficients[x$baseline, colnames(x$coefficients) != "exp(coef)", drop = FALSE]
   cat("\nBaseline spline terms:\n")
   stats::printCoefmat(base_tab, digits = digits, signif.stars = FALSE,
                        P.values = TRUE, has.Pvalue = TRUE)
 
-  cat("\nn =", x$n, ", number of events =", x$nevent, ", parameters =", x$df,
-      rp_na_note(x$na.action), "\n")
-  cat("Log-likelihood =", format(x$loglik, digits = digits),
-      "  AIC =", format(x$aic, digits = digits),
-      "  BIC =", format(x$bic, digits = digits), "\n")
+  cat("\nn = ", x$n, ", number of events = ", x$nevent, ", parameters = ", x$df,
+      rp_na_note(x$na.action), "\n", sep = "")
+  cat("Log-likelihood = ", rp_fmt_fit(x$loglik), ", AIC = ", rp_fmt_fit(x$aic),
+      ", BIC = ", rp_fmt_fit(x$bic), "\n", sep = "")
   invisible(x)
 }

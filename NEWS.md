@@ -1,5 +1,7 @@
 # rpsurv 0.8.2
 
+* `summary()` no longer shows `exp(coef)` for the baseline spline terms: it has no interpretation, and a tiny `exp(intercept)` pushed the whole table into scientific notation. Tables follow the session's `digits` and `scipen` options; log-likelihood, AIC and BIC are printed with two decimals in `print()` and `summary()`.
+
 * `predict()`, `rmst_diff()`, `plot()` and the other functions taking
   `newdata` / `newdata0` now accept covariates on the original variables
   of the formula, like `coxph()` and `stpm2()`: factors or character

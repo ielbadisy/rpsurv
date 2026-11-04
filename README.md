@@ -58,9 +58,9 @@ fit
 #> rpsurv(formula = Surv(rectime, censrec) ~ hormon, data = brcancer, 
 #>     df = 4, scale = "hazard")
 #> 
-#> Scale: hazard   Baseline df: 4   
-#> n = 686 , number of events = 299  
-#> Log-likelihood = -2606   AIC = 5225
+#> Scale: hazard   Baseline df: 4
+#> n = 686, number of events = 299
+#> Log-likelihood = -2606.47, AIC = 5224.94
 
 summary(fit)
 #> Royston-Parmar flexible parametric survival model
@@ -75,15 +75,15 @@ summary(fit)
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
 #> Baseline spline terms:
-#>                   coef  exp(coef)   se(coef)      z Pr(>|z|)
-#> (Intercept) -1.960e+01  3.089e-09  3.257e+00 -6.016 1.79e-09
-#> s(logt)1     2.992e+00  1.993e+01  5.965e-01  5.016 5.27e-07
-#> s(logt)2    -4.431e-01  6.420e-01  5.711e-01 -0.776   0.4378
-#> s(logt)3     1.357e+00  3.886e+00  8.187e-01  1.658   0.0974
-#> s(logt)4    -8.842e-01  4.130e-01  4.176e-01 -2.118   0.0342
+#>                 coef se(coef)      z Pr(>|z|)
+#> (Intercept) -19.5955   3.2573 -6.016 1.79e-09
+#> s(logt)1      2.9925   0.5965  5.016 5.27e-07
+#> s(logt)2     -0.4431   0.5711 -0.776   0.4378
+#> s(logt)3      1.3573   0.8187  1.658   0.0974
+#> s(logt)4     -0.8842   0.4176 -2.118   0.0342
 #> 
-#> n = 686 , number of events = 299 , parameters = 6  
-#> Log-likelihood = -2606   AIC = 5225   BIC = 5247
+#> n = 686, number of events = 299, parameters = 6
+#> Log-likelihood = -2606.47, AIC = 5224.94, BIC = 5247.15
 ```
 
 The summary keeps the interpretable covariate hazard ratio (`hormon`)
