@@ -1,14 +1,23 @@
-## Update submission (0.7.1 -> 0.8.1)
+## Update submission (0.8.1 -> 0.8.2)
 
-See NEWS.md for details.
+This is a bug-fix release soon after 0.8.1. It fixes wrong results that
+0.8.1 returns without any warning:
 
-* New `nle` and `nle.df` arguments to `rpsurv()`: a smooth non-linear
-  covariate effect (restricted cubic spline), specified separately from
-  the time-varying effect (`tve`). `nle.df = 1` reproduces the linear fit
-  exactly.
-* `tve.df` and `nle.df` accept a single value or a named vector.
-* New `nlecurve()` and `tvecurve()` with delta-method 95% confidence
-  intervals, and `plot()` methods for both.
+* Factor covariates: the first factor in the formula got an indicator for
+  every level, collinear with the intercept, so the model was not
+  identified and the standard errors were NaN. Factors now use treatment
+  contrasts.
+* Time-varying effects of continuous covariates (`tve`): the optimisation
+  was badly conditioned, so the variance-covariance matrix could be
+  indefinite (NaN standard errors) or inaccurate. The model is now fitted
+  on an orthogonalised reparameterisation and mapped back exactly.
+* `predict(type = "cumhaz", se.fit = TRUE)` returned swapped confidence
+  limits.
+
+Fits are now validated against `rstpm2::stpm2()` in the tests
+(coefficients, full variance-covariance matrix, log-likelihood). Fitting
+and prediction problems that were silent before now give warnings or
+errors. See NEWS.md for details.
 
 ## Test environments
 
@@ -17,6 +26,8 @@ See NEWS.md for details.
 ## R CMD check results
 
 0 errors | 0 warnings | 1 note
+
+* "Days since last update: 1": a bug-fix release, see above.
 
 * "Compilation used the following non-portable flag(s):
   '-mno-omit-leaf-frame-pointer'". This comes from the local Ubuntu R

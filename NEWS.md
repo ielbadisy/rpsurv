@@ -1,4 +1,4 @@
-# rpsurv (development version)
+# rpsurv 0.8.2
 
 * `summary()` and `confint()` give NA standard errors with one clear warning when the vcov is not positive definite, instead of R's generic "NaNs produced".
 
@@ -30,8 +30,8 @@
   stationary point, when the design matrix is rank deficient (naming the
   aliased columns), when the Hessian is singular or not finite (standard
   errors `NA`), when the Hessian is not positive definite (one warning; the
-  variance-covariance matrix is then not positive definite and some
-  standard errors are `NaN`), and when the final estimates sit on the
+  variance-covariance matrix is then not positive definite and
+  `summary()` / `confint()` report the affected standard errors as `NA`), and when the final estimates sit on the
   likelihood penalty for a decreasing cumulative hazard. Tied centiles
   that merge spline knots now warn, like knots dropped at a boundary.
 * `rpsurv()` now stops with an informative error for data without events,
