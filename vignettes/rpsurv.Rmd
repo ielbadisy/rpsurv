@@ -267,10 +267,11 @@ dev_resid <- residuals(fit, type = "deviance")
 summary(dev_resid)
 ```
 
-`km_compare_plot()` overlays the model-implied survival curve on the
+`km_compare_plot()` overlays the model-based survival curve on the
 nonparametric Kaplan-Meier estimate, by strata of a covariate: a direct
 visual check of whether the chosen spline `df` and `scale` capture the
-data:
+data. The model curve is averaged over the subjects of each group, the
+same population-level quantity that Kaplan-Meier estimates:
 
 ```{r km-compare, fig.cap = "Model vs. Kaplan-Meier, by hormonal therapy status."}
 km_compare_plot(fit, by = "hormon")
@@ -350,7 +351,22 @@ faster. The advantage widens with $n$ in both comparisons, consistent
 with `rpsurv` doing $O(n)$ work per optimiser step against a single
 parallel pass, versus repeated R-level likelihood evaluation (numerical
 gradients, or gradients built from R-level matrix algebra) in the other
-two packages. The benchmark code itself:
+two packages. Below a few thousand rows every fit takes a few hundredths
+of a second and `rstpm2` is slightly faster, because of `rpsurv`'s fixed
+setup cost.
+
+The same comparison against `rstpm2::stpm2` for a time-varying effect
+(`tve = "x1"`, `tve.df = 2`) and a non-linear effect (`nle = "x1"`,
+`nle.df = 3`, with `stpm2` given `ns(x1)` on the same knots):
+
+```{r benchmark-extended, echo = FALSE}
+ext <- readRDS(system.file("extdata", "benchmark_extended.rds", package = "rpsurv"))
+ext$speedup <- round(ext$rstpm2 / ext$rpsurv, 1)
+knitr::kable(ext, digits = 3,
+             col.names = c("model", "n", "rpsurv (s)", "stpm2 (s)", "speedup"))
+```
+
+The benchmark code itself:
 
 ```{r benchmark-code, eval = FALSE}
 simulate_data <- function(n, seed = 1) {

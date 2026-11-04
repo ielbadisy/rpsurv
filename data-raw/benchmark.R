@@ -72,6 +72,35 @@ legend("topleft", legend = c("rpsurv (Rcpp + RcppParallel)", "rstpm2::stpm2", "f
 par(op)
 dev.off()
 
+# Time-varying (tve) and non-linear (nle) effects against rstpm2::stpm2.
+# For nle, stpm2 gets ns() with rpsurv's own knots, so both fit the same
+# model and the log-likelihoods agree.
+ns_term <- function(fit, v) {
+  k <- fit$nle_knots[[v]]
+  sprintf("ns(%s, knots = c(%s), Boundary.knots = c(%s))", v,
+          paste(format(k[-c(1, length(k))], digits = 17), collapse = ", "),
+          paste(format(range(k), digits = 17), collapse = ", "))
+}
+ns_ext <- c(1000, 5000, 20000, 100000)
+extended <- do.call(rbind, lapply(ns_ext, function(n) {
+  d <- simulate_data(n)
+  fit_nle <- rpsurv(Surv(time, status) ~ x1 + x2, data = d, df = 4, nle = "x1", nle.df = 3)
+  f_nle <- as.formula(paste("Surv(time, status) ~", ns_term(fit_nle, "x1"), "+ x2"))
+  rbind(
+    data.frame(model = "tve", n = n,
+      rpsurv = time_median(function() rpsurv(Surv(time, status) ~ x1 + x2, data = d, df = 4,
+                                             tve = "x1", tve.df = 2), reps),
+      rstpm2 = time_median(function() stpm2(Surv(time, status) ~ x1 + x2, data = d, df = 4,
+                                            tvc = list(x1 = 2)), reps)),
+    data.frame(model = "nle", n = n,
+      rpsurv = time_median(function() rpsurv(Surv(time, status) ~ x1 + x2, data = d, df = 4,
+                                             nle = "x1", nle.df = 3), reps),
+      rstpm2 = time_median(function() stpm2(f_nle, data = d, df = 4), reps))
+  )
+}))
+print(extended)
+saveRDS(extended, "inst/extdata/benchmark_extended.rds")
+
 cat("speedup vs rstpm2 and flexsurv:\n")
 print(within(results, {
   speedup_rstpm2 <- rstpm2 / rpsurv
