@@ -59,7 +59,7 @@ fit
 #>     df = 4, scale = "hazard")
 #> 
 #> Scale: hazard   Baseline df: 4   
-#> n = 686 , number of events = 299 
+#> n = 686 , number of events = 299  
 #> Log-likelihood = -2606   AIC = 5225
 
 summary(fit)
@@ -70,19 +70,19 @@ summary(fit)
 #> 
 #> Covariate effects (hazard scale):
 #>           coef exp(coef) [HR] se(coef)      z Pr(>|z|)   
-#> hormon -0.3641         0.6948   0.1249 -2.914  0.00356 **
+#> hormon -0.3641         0.6949   0.1249 -2.914  0.00356 **
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
 #> Baseline spline terms:
 #>                   coef  exp(coef)   se(coef)      z Pr(>|z|)
-#> (Intercept) -1.960e+01  3.086e-09  3.257e+00 -6.016 1.79e-09
-#> s(logt)1     2.993e+00  1.994e+01  5.966e-01  5.016 5.26e-07
-#> s(logt)2    -4.429e-01  6.422e-01  5.711e-01 -0.776   0.4380
-#> s(logt)3     1.357e+00  3.884e+00  8.188e-01  1.657   0.0974
-#> s(logt)4    -8.841e-01  4.131e-01  4.176e-01 -2.117   0.0342
+#> (Intercept) -1.960e+01  3.089e-09  3.257e+00 -6.016 1.79e-09
+#> s(logt)1     2.992e+00  1.993e+01  5.965e-01  5.016 5.27e-07
+#> s(logt)2    -4.431e-01  6.420e-01  5.711e-01 -0.776   0.4378
+#> s(logt)3     1.357e+00  3.886e+00  8.187e-01  1.658   0.0974
+#> s(logt)4    -8.842e-01  4.130e-01  4.176e-01 -2.118   0.0342
 #> 
-#> n = 686 , number of events = 299 , parameters = 6 
+#> n = 686 , number of events = 299 , parameters = 6  
 #> Log-likelihood = -2606   AIC = 5225   BIC = 5247
 ```
 
@@ -97,17 +97,45 @@ of the baseline hazard and are not individually interpretable, matching
 predict(fit, newdata = data.frame(hormon = c(0, 1)), times = c(500, 1000, 2000), type = "survival")
 #>   id time       est
 #> 1  1  500 0.8287000
-#> 2  1 1000 0.6284960
-#> 3  1 2000 0.4078301
-#> 4  2  500 0.8776041
-#> 5  2 1000 0.7241878
-#> 6  2 2000 0.5362198
+#> 2  1 1000 0.6284929
+#> 3  1 2000 0.4078290
+#> 4  2  500 0.8776032
+#> 5  2 1000 0.7241834
+#> 6  2 2000 0.5362160
 
 plot(fit, newdata = data.frame(hormon = c(0, 1)),
      col = c("steelblue", "firebrick"), main = "rpsurv: predicted survival")
 ```
 
 <img src="man/figures/README-predict-1.png" alt="" width="100%" />
+
+`plot()` draws the same profiles on the hazard and cumulative hazard
+scales, each with its 95% confidence band:
+
+``` r
+op <- par(mfrow = c(1, 2))
+plot(fit, newdata = data.frame(hormon = c(0, 1)), type = "hazard",
+     col = c("steelblue", "firebrick"), main = "Hazard")
+plot(fit, newdata = data.frame(hormon = c(0, 1)), type = "cumhaz",
+     col = c("steelblue", "firebrick"), main = "Cumulative hazard")
+```
+
+<img src="man/figures/README-predict-scales-1.png" alt="" width="100%" />
+
+``` r
+par(op)
+```
+
+Factor covariates are given in `newdata` by their levels, as in
+`coxph()`:
+
+``` r
+fit_vet <- rpsurv(Surv(time, status) ~ trt + celltype, data = veteran, df = 3)
+plot(fit_vet, newdata = data.frame(trt = 1, celltype = levels(veteran$celltype)),
+     main = "veteran: predicted survival by cell type")
+```
+
+<img src="man/figures/README-factor-1.png" alt="" width="100%" />
 
 `predict()` also returns `type = "hazard"`, `"cumhaz"`, `"link"` (the
 linear predictor), or `"hr"` (the instantaneous hazard ratio of
@@ -120,8 +148,8 @@ profiles, with a delta-method confidence interval:
 ``` r
 rmst_diff(fit, newdata = data.frame(hormon = 1), newdata0 = data.frame(hormon = 0),
           tau = 2000, se.fit = TRUE)
-#>       est      se    lower    upper
-#> 1 161.595 53.5285 56.68104 266.5089
+#>        est       se    lower    upper
+#> 1 161.5922 53.52856 56.67811 266.5062
 ```
 
 ## Time-varying effects (non-proportional hazards)
@@ -135,9 +163,9 @@ fit_tve <- rpsurv(Surv(rectime, censrec) ~ hormon, data = brcancer,
                   df = 4, tve = "hormon", tve.df = 2)
 coef(fit_tve)
 #>     (Intercept)        s(logt)1        s(logt)2        s(logt)3        s(logt)4 
-#>    -19.19777720      2.93098413     -0.42391914      1.32597578     -0.87854493 
+#>    -19.19831045      2.93107392     -0.42391236      1.32596818     -0.87852652 
 #>          hormon hormon:s(logt)1 hormon:s(logt)2 
-#>     -2.34822990      0.32187562      0.03601483
+#>     -2.34612306      0.32152113      0.03596688
 ```
 
 A likelihood-ratio test of `fit_tve` against `fit` (both
@@ -179,17 +207,17 @@ g(x) - g(ref). Both come with delta-method 95% confidence limits:
 ``` r
 tvecurve(fit_nle, "hormon", times = c(500, 1000, 2000))
 #>   time        est        se      lower       upper
-#> 1  500 -0.3990412 0.1802440 -0.7523129 -0.04576955
-#> 2 1000 -0.3749970 0.1652673 -0.6989149 -0.05107912
-#> 3 2000 -0.4262817 0.2810372 -0.9771045  0.12454116
+#> 1  500 -0.3991813 0.1802581 -0.7524807 -0.04588199
+#> 2 1000 -0.3747085 0.1652700 -0.6986316 -0.05078529
+#> 3 2000 -0.4256658 0.2810353 -0.9764849  0.12515334
 
 nlecurve(fit_nle, "x1", at = c(30, 40, 50, 60, 70), ref = 50)
-#>    x       est         se       lower     upper
-#> 1 30 1.1933311 0.24685222  0.70950961 1.6771525
-#> 2 40 0.1777640 0.08409718  0.01293659 0.3425915
-#> 3 50 0.0000000 0.00000000  0.00000000 0.0000000
-#> 4 60 0.4227621 0.11179080  0.20365612 0.6418680
-#> 5 70 0.2303089 0.20586941 -0.17318769 0.6338056
+#>    x       est        se       lower     upper
+#> 1 30 1.1927967 0.2468867  0.70890769 1.6766858
+#> 2 40 0.1781839 0.0840963  0.01335822 0.3430097
+#> 3 50 0.0000000 0.0000000  0.00000000 0.0000000
+#> 4 60 0.4218401 0.1117849  0.20274560 0.6409345
+#> 5 70 0.2309416 0.2057613 -0.17234318 0.6342264
 ```
 
 Their `plot()` methods draw the hazard ratio against time or against the
@@ -211,10 +239,23 @@ par(op)
 
 ## Diagnostics
 
+`residuals()` gives Cox-Snell, martingale or deviance residuals.
+`coxsnell_plot()` draws the Nelson-Aalen cumulative hazard of the
+Cox-Snell residuals against the residuals: a well-fitting model follows
+the diagonal. `km_compare_plot()` overlays the Kaplan-Meier estimate
+(solid) on the model’s average predicted survival over the same subjects
+(dashed), overall or by group:
+
 ``` r
-residuals(fit, type = "coxsnell")   # also "martingale", "deviance"
-coxsnell_plot(fit)                  # Cox-Snell residual plot
-km_compare_plot(fit)                # fitted vs. Kaplan-Meier overlay
+op <- par(mfrow = c(1, 2))
+coxsnell_plot(fit, main = "Cox-Snell residuals")
+km_compare_plot(fit, by = "hormon", main = "Kaplan-Meier vs rpsurv")
+```
+
+<img src="man/figures/README-diagnostics-1.png" alt="" width="100%" />
+
+``` r
+par(op)
 ```
 
 ## Validation
@@ -229,34 +270,49 @@ which also covers left truncation, and
 
 ## Benchmark vs. `rstpm2` and `flexsurv`
 
-Wall-clock fit time on simulated Weibull-hazard data with two
-covariates, reproducible via `data-raw/benchmark.R` (in the GitHub
-repository, not in the CRAN tarball). `flexsurv::flexsurvspline` is
-materially slower per fit, so it was only run up to n=2e4 to keep the
-benchmark tractable; `rstpm2::stpm2` was run up to n=2e5.
+Wall-clock fit time (seconds, median of 3 runs) on simulated
+Weibull-hazard data with two covariates, reproducible via
+`data-raw/benchmark.R` (in the GitHub repository, not in the CRAN
+tarball). `flexsurv::flexsurvspline` is much slower per fit, so it was
+only run up to n = 20,000; `rstpm2::stpm2` was run up to n = 200,000.
+The `speedup` columns are the other package’s time divided by
+`rpsurv`’s.
 
-|       n | rpsurv (s) | rstpm2 (s) | flexsurvspline (s) |
-|--------:|-----------:|-----------:|-------------------:|
-|   1,000 |      0.031 |      0.017 |              0.121 |
-|   5,000 |      0.037 |      0.058 |              0.636 |
-|  20,000 |      0.080 |      0.238 |              2.330 |
-|  50,000 |      0.165 |      1.290 |                 \- |
-| 100,000 |      0.247 |      2.410 |                 \- |
-| 200,000 |      0.413 |      4.912 |                 \- |
-| 500,000 |      1.182 |         \- |                 \- |
+|     n | rpsurv (s) | rstpm2 (s) | flexsurvspline (s) | speedup vs rstpm2 | speedup vs flexsurv |
+|------:|-----------:|-----------:|-------------------:|------------------:|--------------------:|
+| 1e+03 |      0.059 |      0.021 |              0.166 |               0.4 |                 2.8 |
+| 5e+03 |      0.055 |      0.075 |              0.618 |               1.4 |                11.2 |
+| 2e+04 |      0.110 |      0.299 |              2.676 |               2.7 |                24.3 |
+| 5e+04 |      0.144 |      1.200 |                 NA |               8.3 |                  NA |
+| 1e+05 |      0.223 |      2.519 |                 NA |              11.3 |                  NA |
+| 2e+05 |      0.440 |      5.954 |                 NA |              13.5 |                  NA |
+| 5e+05 |      1.207 |         NA |                 NA |                NA |                  NA |
 
-At n=200,000, `rpsurv` is about 12x faster than `rstpm2::stpm2` and
-continues to scale to n=500,000 (`rstpm2` was not run at that size). At
-n=20,000, `rpsurv` is about 29x faster than `flexsurv::flexsurvspline`.
-The advantage widens with n in both comparisons: `rpsurv` does O(n) work
-per optimizer step in a single fused parallel pass over the
-log-likelihood and its analytic gradient, computed together
-(`RcppParallel::parallelReduce`), against repeated R-level likelihood
-evaluation (numerical gradients, or gradients built from R-level matrix
-algebra) in the other two packages. See `vignette("rpsurv")` for the
-full benchmark code and what else is delegated to C++ (the spline basis
-itself, and closed-form starting values from a bounded Kaplan-Meier
-subsample).
+The same comparison with a time-varying effect (`tve = "x1"`,
+`tve.df = 2`; `stpm2(..., tvc = list(x1 = 2))`) and a non-linear effect
+(`nle = "x1"`, `nle.df = 3`; `stpm2` with `ns(x1)` on the same knots, so
+both fit the same model):
+
+| model |     n | rpsurv (s) | rstpm2 (s) | speedup vs rstpm2 |
+|:------|------:|-----------:|-----------:|------------------:|
+| tve   | 1e+03 |      0.033 |      0.019 |               0.6 |
+| nle   | 1e+03 |      0.032 |      0.028 |               0.9 |
+| tve   | 5e+03 |      0.061 |      0.085 |               1.4 |
+| nle   | 5e+03 |      0.059 |      0.095 |               1.6 |
+| tve   | 2e+04 |      0.106 |      0.333 |               3.1 |
+| nle   | 2e+04 |      0.103 |      0.375 |               3.6 |
+| tve   | 1e+05 |      0.247 |      3.619 |              14.7 |
+| nle   | 1e+05 |      0.231 |      3.601 |              15.6 |
+
+`rpsurv` gets faster relative to the others as n grows: it does O(n)
+work per optimizer step in one fused parallel pass over the
+log-likelihood and its analytic gradient
+(`RcppParallel::parallelReduce`), while the other two packages evaluate
+the likelihood repeatedly at R level. Below a few thousand rows a fit
+takes a few hundredths of a second in every package, and `rstpm2` is
+slightly faster there because of rpsurv’s fixed setup cost (spline
+basis, starting values, reparameterisation). See `vignette("rpsurv")`
+for the benchmark code.
 
 ## Bundled datasets
 

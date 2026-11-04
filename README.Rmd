@@ -80,6 +80,27 @@ plot(fit, newdata = data.frame(hormon = c(0, 1)),
      col = c("steelblue", "firebrick"), main = "rpsurv: predicted survival")
 ```
 
+`plot()` draws the same profiles on the hazard and cumulative hazard
+scales, each with its 95% confidence band:
+
+```{r predict-scales, fig.width = 9, fig.height = 4}
+op <- par(mfrow = c(1, 2))
+plot(fit, newdata = data.frame(hormon = c(0, 1)), type = "hazard",
+     col = c("steelblue", "firebrick"), main = "Hazard")
+plot(fit, newdata = data.frame(hormon = c(0, 1)), type = "cumhaz",
+     col = c("steelblue", "firebrick"), main = "Cumulative hazard")
+par(op)
+```
+
+Factor covariates are given in `newdata` by their levels, as in
+`coxph()`:
+
+```{r factor, fig.height = 4.5}
+fit_vet <- rpsurv(Surv(time, status) ~ trt + celltype, data = veteran, df = 3)
+plot(fit_vet, newdata = data.frame(trt = 1, celltype = levels(veteran$celltype)),
+     main = "veteran: predicted survival by cell type")
+```
+
 `predict()` also returns `type = "hazard"`, `"cumhaz"`, `"link"` (the
 linear predictor), or `"hr"` (the instantaneous hazard ratio of `newdata`
 versus `newdata0`, correct under time-varying effects), with
@@ -160,10 +181,18 @@ par(op)
 
 ## Diagnostics
 
-```r
-residuals(fit, type = "coxsnell")   # also "martingale", "deviance"
-coxsnell_plot(fit)                  # Cox-Snell residual plot
-km_compare_plot(fit)                # fitted vs. Kaplan-Meier overlay
+`residuals()` gives Cox-Snell, martingale or deviance residuals.
+`coxsnell_plot()` draws the Nelson-Aalen cumulative hazard of the
+Cox-Snell residuals against the residuals: a well-fitting model follows
+the diagonal. `km_compare_plot()` overlays the Kaplan-Meier estimate
+(solid) on the model's average predicted survival over the same subjects
+(dashed), overall or by group:
+
+```{r diagnostics, fig.width = 9, fig.height = 4}
+op <- par(mfrow = c(1, 2))
+coxsnell_plot(fit, main = "Cox-Snell residuals")
+km_compare_plot(fit, by = "hormon", main = "Kaplan-Meier vs rpsurv")
+par(op)
 ```
 
 ## Validation
@@ -177,33 +206,42 @@ covers left truncation, and `tests/testthat/test-components.R` for the
 
 ## Benchmark vs. `rstpm2` and `flexsurv`
 
-Wall-clock fit time on simulated Weibull-hazard data with two covariates,
-reproducible via `data-raw/benchmark.R` (in the GitHub repository, not in
-the CRAN tarball). `flexsurv::flexsurvspline` is materially slower per
-fit, so it was only run up to n=2e4 to keep the benchmark tractable;
-`rstpm2::stpm2` was run up to n=2e5.
+Wall-clock fit time (seconds, median of 3 runs) on simulated
+Weibull-hazard data with two covariates, reproducible via
+`data-raw/benchmark.R` (in the GitHub repository, not in the CRAN
+tarball). `flexsurv::flexsurvspline` is much slower per fit, so it was
+only run up to n = 20,000; `rstpm2::stpm2` was run up to n = 200,000.
+The `speedup` columns are the other package's time divided by `rpsurv`'s.
 
-| n | rpsurv (s) | rstpm2 (s) | flexsurvspline (s) |
-|---:|---:|---:|---:|
-| 1,000 | 0.031 | 0.017 | 0.121 |
-| 5,000 | 0.037 | 0.058 | 0.636 |
-| 20,000 | 0.080 | 0.238 | 2.330 |
-| 50,000 | 0.165 | 1.290 | - |
-| 100,000 | 0.247 | 2.410 | - |
-| 200,000 | 0.413 | 4.912 | - |
-| 500,000 | 1.182 | - | - |
+```{r bench-ph, echo = FALSE}
+bench <- readRDS("inst/extdata/benchmark_results.rds")
+bench$speedup_rstpm2 <- round(bench$rstpm2 / bench$rpsurv, 1)
+bench$speedup_flexsurv <- round(bench$flexsurv / bench$rpsurv, 1)
+knitr::kable(bench, digits = 3, format.args = list(big.mark = ","),
+             col.names = c("n", "rpsurv (s)", "rstpm2 (s)", "flexsurvspline (s)",
+                           "speedup vs rstpm2", "speedup vs flexsurv"))
+```
 
-At n=200,000, `rpsurv` is about 12x faster than `rstpm2::stpm2` and
-continues to scale to n=500,000 (`rstpm2` was not run at that size). At
-n=20,000, `rpsurv` is about 29x faster than `flexsurv::flexsurvspline`.
-The advantage widens with n in both comparisons: `rpsurv` does O(n) work
-per optimizer step in a single fused parallel pass over the log-likelihood
-and its analytic gradient, computed together (`RcppParallel::parallelReduce`),
-against repeated R-level likelihood evaluation (numerical gradients, or
-gradients built from R-level matrix algebra) in the other two packages.
-See `vignette("rpsurv")` for the full benchmark code and what else is
-delegated to C++ (the spline basis itself, and closed-form starting
-values from a bounded Kaplan-Meier subsample).
+The same comparison with a time-varying effect (`tve = "x1"`,
+`tve.df = 2`; `stpm2(..., tvc = list(x1 = 2))`) and a non-linear effect
+(`nle = "x1"`, `nle.df = 3`; `stpm2` with `ns(x1)` on the same knots, so
+both fit the same model):
+
+```{r bench-ext, echo = FALSE}
+ext <- readRDS("inst/extdata/benchmark_extended.rds")
+ext$speedup <- round(ext$rstpm2 / ext$rpsurv, 1)
+knitr::kable(ext, digits = 3, format.args = list(big.mark = ","),
+             col.names = c("model", "n", "rpsurv (s)", "rstpm2 (s)", "speedup vs rstpm2"))
+```
+
+`rpsurv` gets faster relative to the others as n grows: it does O(n) work
+per optimizer step in one fused parallel pass over the log-likelihood and
+its analytic gradient (`RcppParallel::parallelReduce`), while the other
+two packages evaluate the likelihood repeatedly at R level. Below a few
+thousand rows a fit takes a few hundredths of a second in every package,
+and `rstpm2` is slightly faster there because of rpsurv's fixed setup cost
+(spline basis, starting values, reparameterisation). See
+`vignette("rpsurv")` for the benchmark code.
 
 ## Bundled datasets
 
