@@ -18,6 +18,11 @@
   indicator column for every level, which is collinear with the model
   intercept: the model was not identified and its standard errors were
   NaN, without a warning. Factor fits now match `rstpm2::stpm2()`.
+* `predict(type = "cumhaz", se.fit = TRUE)` returned the confidence
+  limits swapped (`lower` above `upper`). The cumulative hazard and its
+  limits are now computed directly from the linear predictor, so they no
+  longer overflow to `Inf` when the survival probability underflows to 0
+  (also used by `residuals()`).
 
 # rpsurv 0.8.1
 

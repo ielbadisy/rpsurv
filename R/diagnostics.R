@@ -11,13 +11,11 @@
 #' @export
 residuals.rpsurv <- function(object, type = c("coxsnell", "martingale", "deviance"), ...) {
   type <- match.arg(type)
-  inv_link <- rp_inv_link(object$scale)
-
   eta <- as.numeric(object$X %*% object$coefficients)
-  H <- -log(inv_link(eta))
+  H <- rp_cumhaz(eta, object$scale)
   if (any(object$has_entry > 0)) {
     eta_e <- as.numeric(object$Xentry %*% object$coefficients)
-    H <- H - object$has_entry * (-log(inv_link(eta_e)))
+    H <- H - object$has_entry * rp_cumhaz(eta_e, object$scale)
   }
   r <- H
 

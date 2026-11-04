@@ -314,3 +314,18 @@ test_that("a factor covariate is coded by treatment contrasts and matches rstpm2
   expect_equal(unname(mapped$coef), unname(coef(ref)), tolerance = 1e-3)
   expect_equal(unname(sqrt(diag(mapped$vcov))), unname(sqrt(diag(vcov(ref)))), tolerance = 1e-3)
 })
+
+test_that("cumulative hazard confidence limits are ordered and do not overflow", {
+  for (sc in c("hazard", "odds", "normal")) {
+    fit <- rpsurv(survival::Surv(time, status) ~ karno, data = veteran, scale = sc)
+    p <- predict(fit, newdata = data.frame(karno = c(30, 90)), times = c(1, 50, 300, 1e5),
+                 type = "cumhaz", se.fit = TRUE)
+    expect_true(all(is.finite(p$est)))
+    expect_true(all(p$lower <= p$est & p$est <= p$upper))
+    s <- predict(fit, newdata = data.frame(karno = c(30, 90)), times = c(1, 50, 300),
+                 type = "survival", se.fit = TRUE)
+    ok <- s$est > 1e-12
+    expect_equal(p$est[p$time <= 300][ok], -log(s$est[ok]), tolerance = 1e-8)
+    expect_equal(p$lower[p$time <= 300][ok], -log(s$upper[ok]), tolerance = 1e-8)
+  }
+})

@@ -53,6 +53,16 @@ rp_grad_surv <- function(d, scale) {
 #' @keywords internal
 rp_delta_se <- function(grad, V) sqrt(rowSums((grad %*% V) * grad))
 
+# Cumulative hazard -log S(eta), computed without underflow of S.
+#' @keywords internal
+rp_cumhaz <- function(eta, scale) {
+  switch(scale,
+    hazard = exp(eta),
+    odds = ifelse(eta > 0, eta + log1p(exp(-eta)), log1p(exp(eta))),
+    normal = -stats::pnorm(eta, lower.tail = FALSE, log.p = TRUE)
+  )
+}
+
 #' Predict from a fitted Royston-Parmar model
 #'
 #' @param object a fitted `"rpsurv"` object.
@@ -180,7 +190,7 @@ predict.rpsurv <- function(object, newdata = NULL, newdata0 = NULL, times = NULL
     est <- switch(type,
       link = eta,
       survival = d$S,
-      cumhaz = -log(d$S),
+      cumhaz = rp_cumhaz(eta, object$scale),
       hazard = rp_hazard_from_design(d, times, object$scale)
     )
 
@@ -197,8 +207,9 @@ predict.rpsurv <- function(object, newdata = NULL, newdata0 = NULL, times = NULL
         out$lower <- inv_link(hi_eta)
         out$upper <- inv_link(lo_eta)
       } else {
-        out$lower <- -log(inv_link(hi_eta))
-        out$upper <- -log(inv_link(lo_eta))
+        # the cumulative hazard increases with eta
+        out$lower <- rp_cumhaz(lo_eta, object$scale)
+        out$upper <- rp_cumhaz(hi_eta, object$scale)
       }
     } else if (se.fit && type == "hazard") {
       grad <- rp_grad_loghaz(d, object$scale)
