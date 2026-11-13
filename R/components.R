@@ -112,7 +112,7 @@ tvecurve <- function(object, var, times = NULL, type = c("hr", "link"), ref = 0,
   if (type == "link") {
     tcols <- grep(paste0("^", var, ":s\\(logt\\)"), names(b))
     L <- matrix(0, length(times), length(b))
-    L[, tcols] <- rcs_basis(log_times, object$tve_knots[[var]])
+    L[, tcols] <- rcsbasis(log_times, object$tve_knots[[var]])
     if (!in_nle) L[, match(var, names(b))] <- 1
     est <- as.numeric(L %*% b)
     se <- rp_delta_se(L, V)

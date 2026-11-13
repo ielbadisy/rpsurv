@@ -57,7 +57,7 @@ test_that("invalid inputs give informative errors", {
 })
 
 test_that("tied centiles that merge knots are reported", {
-  expect_warning(k <- default_knots(c(rep(0, 10), rep(1, 30), rep(2, 30), 3), 4), "tied")
+  expect_warning(k <- defaultknots(c(rep(0, 10), rep(1, 30), rep(2, 30), 3), 4), "tied")
   expect_equal(k, c(0, 1, 2, 3))
 })
 

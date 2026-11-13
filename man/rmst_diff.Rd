@@ -4,15 +4,24 @@
 \alias{rmst_diff}
 \title{Restricted mean survival time difference between two covariate profiles}
 \usage{
-rmst_diff(object, newdata, newdata0, tau, se.fit = FALSE, n_grid = 200)
+rmst_diff(
+  object,
+  newdata,
+  newdata0,
+  tau,
+  se.fit = FALSE,
+  n_grid = 200,
+  marginal = FALSE
+)
 }
 \arguments{
 \item{object}{a fitted \code{"rpsurv"} object.}
 
-\item{newdata}{a one-row data frame, the contrast covariate profile
-(on the original variables, as in \code{\link[=predict.rpsurv]{predict.rpsurv()}}).}
+\item{newdata}{a data frame, the contrast covariate profiles (on the
+original variables, as in \code{\link[=predict.rpsurv]{predict.rpsurv()}}), one row per profile.}
 
-\item{newdata0}{a one-row data frame, the reference covariate profile.}
+\item{newdata0}{a data frame of reference covariate profiles, with the
+same number of rows as \code{newdata}.}
 
 \item{tau}{numeric restriction time.}
 
@@ -20,25 +29,54 @@ rmst_diff(object, newdata, newdata0, tau, se.fit = FALSE, n_grid = 200)
 and 95\% confidence interval. The delta method is applied directly to
 the trapezoidal-weighted sum of the survival-difference gradients
 (a linear combination of the model coefficients' asymptotic normal
-distribution stays normal), not by resampling.}
+distribution stays normal), not by resampling. For a marginal
+contrast the gradient is the average of the row gradients; the
+standard error treats the rows of \code{newdata} as fixed, so it does not
+include the sampling variability of the covariate distribution
+(usually small for a contrast; use the bootstrap if it matters).}
 
 \item{n_grid}{number of grid points used for the trapezoidal
 integration (default 200).}
+
+\item{marginal}{logical; if \code{TRUE}, return the marginal (standardised)
+contrast averaged over the rows of \code{newdata} and \code{newdata0}.}
 }
 \value{
-a one-row data frame with columns \code{est} and, if \code{se.fit = TRUE}, \code{se}, \code{lower}, \code{upper}.
+a data frame with columns \code{est} and, if \code{se.fit = TRUE}, \code{se},
+\code{lower}, \code{upper}. It has one row for a one-row \code{newdata} or for
+\code{marginal = TRUE}; otherwise one row per row of \code{newdata}, with an
+extra leading \code{id} column (the row number).
 }
 \description{
 Integrates the survival difference \code{sdiff = S(t | newdata) - S(t | newdata0)} from 0 to \code{tau} by the trapezoidal rule, with an
 optional delta-method standard error and 95\% confidence interval.
 }
+\details{
+Row \code{i} of \code{newdata} is contrasted with row \code{i} of \code{newdata0}. By
+default (\code{marginal = FALSE}) one conditional contrast is returned per
+row. With \code{marginal = TRUE}, the restricted mean survival times are
+averaged over the rows under each profile and their difference is
+returned: setting the exposure to each of its levels in the analysis
+data (for example \code{transform(data, trt = 1)} and
+\code{transform(data, trt = 0)}) gives the standardised (marginal,
+g-formula) RMST difference.
+}
 \examples{
 \donttest{
 dat <- data.frame(
-  time = rexp(200, 0.2), status = rbinom(200, 1, 0.7), x1 = rbinom(200, 1, 0.5)
+  time = rexp(200, 0.2), status = rbinom(200, 1, 0.7),
+  x1 = rbinom(200, 1, 0.5), x2 = rnorm(200)
 )
-fit <- rpsurv(survival::Surv(time, status) ~ x1, data = dat, tve = "x1")
-rmst_diff(fit, newdata = data.frame(x1 = 1), newdata0 = data.frame(x1 = 0),
-          tau = 4, se.fit = TRUE)
+fit <- rpsurv(survival::Surv(time, status) ~ x1 + x2, data = dat, tve = "x1")
+rmst_diff(fit, newdata = data.frame(x1 = 1, x2 = 0),
+          newdata0 = data.frame(x1 = 0, x2 = 0), tau = 4, se.fit = TRUE)
+
+# one conditional contrast per row
+nd <- data.frame(x2 = c(-1, 0, 1))
+rmst_diff(fit, transform(nd, x1 = 1), transform(nd, x1 = 0), tau = 4, se.fit = TRUE)
+
+# marginal (standardised) contrast over the sample
+rmst_diff(fit, transform(dat, x1 = 1), transform(dat, x1 = 0), tau = 4,
+          se.fit = TRUE, marginal = TRUE)
 }
 }

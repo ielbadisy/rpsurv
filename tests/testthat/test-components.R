@@ -40,7 +40,7 @@ test_that("tvecurve matches predict(type = 'hr') and the link-scale coefficient"
   expect_equal(tv$upper - tv$est, log(hr$upper) - log(hr$est), tolerance = 1e-8)
   ln <- tvecurve(f, "x1", times = tt, type = "link")
   b <- coef(f)
-  manual <- b["x1"] + rpsurv:::rcs_basis(log(tt), f$tve_knots$x1) %*% b[grep("^x1:s\\(logt\\)", names(b))]
+  manual <- b["x1"] + rcsbasis(log(tt), f$tve_knots$x1) %*% b[grep("^x1:s\\(logt\\)", names(b))]
   expect_equal(ln$est, as.numeric(manual), tolerance = 1e-10)
 })
 
@@ -91,4 +91,30 @@ test_that("tvecurve and nlecurve return classed data frames that plot", {
   expect_silent(plot(tvecurve(f, "x1", type = "link")))
   expect_silent(plot(tv, exp = FALSE, ci = FALSE))
   expect_silent(plot(tvecurve(f, "x1", ref = 1), add = TRUE, col = 2))
+})
+
+test_that("rcsbasis and defaultknots are exported and match rstpm2", {
+  expect_true(all(c("rcsbasis", "defaultknots") %in% getNamespaceExports("rpsurv")))
+  skip_if_not_installed("rstpm2")
+  suppressPackageStartupMessages(library(rstpm2)) # stpm2() calls internal gsm() unqualified
+  d <- get(data("brcancer", package = "rstpm2", envir = environment()))
+  lt <- log(d$rectime[d$censrec == 1])
+  for (df in 2:5) {
+    ref <- rstpm2::stpm2(survival::Surv(rectime, censrec) ~ hormon, data = d, df = df)
+    pv <- as.list(attr(ref@terms, "predvars"))
+    term <- pv[[grep("nsx", vapply(pv, function(e) paste(deparse(e), collapse = ""), ""))[1]]]
+    expect_equal(defaultknots(lt, df), sort(unname(c(eval(term$knots), eval(term$Boundary.knots)))))
+  }
+  # same column space as rstpm2::nsx with the same knots
+  x <- log(d$rectime)
+  k <- defaultknots(lt, 4)
+  B <- cbind(1, rcsbasis(x, k))
+  N <- cbind(1, rstpm2::nsx(x, knots = k[2:4], Boundary.knots = k[c(1, 5)]))
+  expect_lt(max(abs(qr.resid(qr(N), B))), 1e-8)
+  expect_lt(max(abs(qr.resid(qr(B), N))), 1e-8)
+  # derivative is d(basis)/dx
+  h <- 1e-6
+  expect_equal(rcsbasis(x, k, derivative = TRUE),
+               (rcsbasis(x + h, k) - rcsbasis(x - h, k)) / (2 * h), tolerance = 1e-6)
+  expect_error(rcsbasis(x, 1), "boundary knots")
 })

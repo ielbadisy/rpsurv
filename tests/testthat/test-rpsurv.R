@@ -341,3 +341,71 @@ test_that("summary() baseline table has no exp(coef) and prints without scientif
   expect_true(any(grepl("Log-likelihood = -2606.47, AIC = 5224.94", out, fixed = TRUE)))
   expect_true(any(grepl("n = 686, number of events = 299, parameters = 6", out, fixed = TRUE)))
 })
+
+test_that("rmst_diff gives one conditional contrast per row of a multi-row newdata", {
+  d <- get_brcancer()
+  fit <- rpsurv(survival::Surv(rectime, censrec) ~ hormon + x1, data = d, df = 4,
+                tve = "hormon", tve.df = 2)
+  nd <- data.frame(x1 = c(40, 55, 70))
+  rc <- rmst_diff(fit, transform(nd, hormon = 1), transform(nd, hormon = 0),
+                  tau = 1500, se.fit = TRUE)
+  expect_named(rc, c("id", "est", "se", "lower", "upper"))
+  expect_equal(rc$id, 1:3)
+  for (i in 1:3) {
+    one <- rmst_diff(fit, data.frame(hormon = 1, x1 = nd$x1[i]), data.frame(hormon = 0, x1 = nd$x1[i]),
+                     tau = 1500, se.fit = TRUE)
+    expect_named(one, c("est", "se", "lower", "upper"))
+    expect_equal(unlist(rc[i, -1]), unlist(one), ignore_attr = TRUE)
+  }
+  expect_error(rmst_diff(fit, transform(nd, hormon = 1), data.frame(hormon = 0, x1 = 40), tau = 1500),
+               "same number of rows")
+  expect_error(rmst_diff(fit, transform(nd, hormon = 1), transform(nd, hormon = 0), tau = 1500,
+                         marginal = NA), "marginal")
+})
+
+test_that("conditional rmst_diff matches rstpm2 predict(type = 'rmstdiff')", {
+  skip_if_not_installed("rstpm2")
+  suppressPackageStartupMessages(library(rstpm2)) # stpm2() calls internal gsm() unqualified
+  d <- get_brcancer()
+  fit <- rpsurv(survival::Surv(rectime, censrec) ~ hormon + x1, data = d, df = 4,
+                tve = "hormon", tve.df = 2)
+  ref <- rstpm2::stpm2(survival::Surv(rectime, censrec) ~ hormon + x1, data = d, df = 4,
+                       tvc = list(hormon = 2))
+  nd <- data.frame(x1 = c(40, 55, 70))
+  rc <- rmst_diff(fit, transform(nd, hormon = 1), transform(nd, hormon = 0),
+                  tau = 1500, se.fit = TRUE, n_grid = 2000)
+  # call the S4 method directly (dispatch from a package namespace is
+  # unreliable under R CMD check); rstpm2 reports unexposed minus exposed
+  pred_stpm2 <- methods::selectMethod("predict", "stpm2")
+  rr <- pred_stpm2(ref, newdata = transform(nd, hormon = 0, rectime = 1500), type = "rmstdiff",
+                   var = "hormon", exposed = function(data) transform(data, hormon = 1),
+                   se.fit = TRUE, n.gauss.quad = 200)
+  expect_equal(rc$est, -rr$Estimate, tolerance = 1e-4)
+  expect_equal(rc$se, (rr$upper - rr$lower) / (2 * stats::qnorm(0.975)), tolerance = 1e-3)
+})
+
+test_that("marginal rmst_diff averages the row contrasts, with the averaged-gradient SE", {
+  d <- get_brcancer()
+  fit <- rpsurv(survival::Surv(rectime, censrec) ~ hormon + x1, data = d, df = 4,
+                tve = "hormon", tve.df = 2)
+  nd <- d[1:25, ]
+  d1 <- transform(nd, hormon = 1); d0 <- transform(nd, hormon = 0)
+  rc <- rmst_diff(fit, d1, d0, tau = 1500, se.fit = TRUE)
+  m <- rmst_diff(fit, d1, d0, tau = 1500, se.fit = TRUE, marginal = TRUE)
+  expect_named(m, c("est", "se", "lower", "upper"))
+  expect_equal(nrow(m), 1L)
+  expect_equal(m$est, mean(rc$est), tolerance = 1e-10)
+  # SE lies between that of the average of independent contrasts and the mean SE
+  expect_true(m$se <= mean(rc$se) + 1e-8 && m$se > 0)
+  # numerical gradient of the marginal estimate wrt the coefficients
+  f_est <- function(b) {
+    g <- fit; g$coefficients <- b
+    rmst_diff(g, d1, d0, tau = 1500, marginal = TRUE)$est
+  }
+  b <- fit$coefficients
+  grad <- vapply(seq_along(b), function(j) {
+    h <- 1e-5 * max(1, abs(b[j])); bp <- b; bm <- b; bp[j] <- b[j] + h; bm[j] <- b[j] - h
+    (f_est(bp) - f_est(bm)) / (2 * h)
+  }, 0)
+  expect_equal(m$se, sqrt(drop(grad %*% fit$vcov %*% grad)), tolerance = 1e-4)
+})
