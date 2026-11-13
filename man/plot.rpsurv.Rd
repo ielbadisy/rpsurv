@@ -26,8 +26,8 @@ and each factor, character or logical variable at its most common
 value in the fitted data.}
 
 \item{type}{one of \code{"survival"}, \code{"hazard"}, \code{"cumhaz"} (predicted
-curves), \code{"coxsnell"} (Cox-Snell residual plot, see \code{\link[=coxsnell_plot]{coxsnell_plot()}})
-or \code{"km"} (Kaplan-Meier vs model, see \code{\link[=km_compare_plot]{km_compare_plot()}}). The
+curves), \code{"coxsnell"} (Cox-Snell residual plot, see \code{\link[=coxsnellplot]{coxsnellplot()}})
+or \code{"km"} (Kaplan-Meier vs model, see \code{\link[=kmcompareplot]{kmcompareplot()}}). The
 diagnostics use the fitted data, so \code{newdata}, \code{times} and \code{ci} do not
 apply to them.}
 
@@ -47,15 +47,15 @@ curves cross least. For \code{type = "km"} the legend is drawn by default.}
 
 \item{by}{for \code{type = "km"} only: optional grouping, the name of a
 variable of the model formula or a vector with one value per
-observation used in the fit (see \code{\link[=km_compare_plot]{km_compare_plot()}}).}
+observation used in the fit (see \code{\link[=kmcompareplot]{kmcompareplot()}}).}
 
 \item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}, such as
 \code{ylim} or \code{main} (and \code{n_grid} for \code{type = "km"}).}
 }
 \value{
 Called for its side effect of drawing the plot. For the
-diagnostics, invisibly returns the value of \code{\link[=coxsnell_plot]{coxsnell_plot()}} or
-\code{\link[=km_compare_plot]{km_compare_plot()}}. For predicted curves, invisibly returns the
+diagnostics, invisibly returns the value of \code{\link[=coxsnellplot]{coxsnellplot()}} or
+\code{\link[=kmcompareplot]{kmcompareplot()}}. For predicted curves, invisibly returns the
 \code{data.frame} of predictions produced by \code{\link[=predict.rpsurv]{predict.rpsurv()}}, with columns \code{id} (row of \code{newdata}), \code{time},
 \code{est}, and, when \code{ci = TRUE}, \code{lower} and \code{upper} for the 95\%
 confidence band. These are exactly the plotted values.
@@ -63,8 +63,8 @@ confidence band. These are exactly the plotted values.
 \description{
 Draws predicted survival, hazard or cumulative hazard curves for
 covariate profiles, or one of the two goodness-of-fit diagnostics:
-\code{type = "coxsnell"} calls \code{\link[=coxsnell_plot]{coxsnell_plot()}} and \code{type = "km"} calls
-\code{\link[=km_compare_plot]{km_compare_plot()}}.
+\code{type = "coxsnell"} calls \code{\link[=coxsnellplot]{coxsnellplot()}} and \code{type = "km"} calls
+\code{\link[=kmcompareplot]{kmcompareplot()}}.
 }
 \examples{
 \donttest{

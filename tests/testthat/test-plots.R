@@ -20,7 +20,7 @@ test_that("newdata takes factor and character covariates on their original varia
   hr <- predict(fit, newdata = nd[1, ], newdata0 = transform(nd[1, ], celltype = "squamous"),
                 times = 50, type = "hr")
   expect_equal(hr$est, unname(exp(coef(fit)["celltypeadeno"])), tolerance = 1e-8)
-  rd <- rmst_diff(fit, nd[1, ], transform(nd[1, ], celltype = "squamous"), tau = 200)
+  rd <- rmstdiff(fit, nd[1, ], transform(nd[1, ], celltype = "squamous"), tau = 200)
   expect_true(rd$est < 0)
 })
 
@@ -72,11 +72,11 @@ test_that("plot.rpsurv default profile uses the most common level of a factor", 
   expect_equal(as.character(prof$celltype), names(which.max(table(veteran$celltype))))
 })
 
-test_that("km_compare_plot model curve is the mean of the individual predicted curves", {
+test_that("kmcompareplot model curve is the mean of the individual predicted curves", {
   fit <- rpsurv(survival::Surv(time, status) ~ trt + celltype + karno, data = veteran)
   grDevices::pdf(NULL)
   on.exit(grDevices::dev.off())
-  k <- km_compare_plot(fit, by = "celltype")
+  k <- kmcompareplot(fit, by = "celltype")
   expect_setequal(unique(k$group), levels(veteran$celltype))
   m <- k[k$group == "adeno" & k$curve == "model", ]
   idx <- veteran$celltype == "adeno"
@@ -85,13 +85,13 @@ test_that("km_compare_plot model curve is the mean of the individual predicted c
   km <- survival::survfit(survival::Surv(time, status) ~ 1, data = veteran[idx, ])
   expect_equal(k$surv[k$group == "adeno" & k$curve == "km"], c(1, km$surv))
 
-  expect_setequal(unique(km_compare_plot(fit, by = cut(veteran$karno, 3))$group),
+  expect_setequal(unique(kmcompareplot(fit, by = cut(veteran$karno, 3))$group),
                   levels(cut(veteran$karno, 3)))
-  expect_error(km_compare_plot(fit, by = "karno"), "distinct values")
-  expect_error(km_compare_plot(fit, by = "foo"), "must name a variable")
+  expect_error(kmcompareplot(fit, by = "karno"), "distinct values")
+  expect_error(kmcompareplot(fit, by = "foo"), "must name a variable")
 })
 
-test_that("km_compare_plot model curve is close to KM for a well-specified model", {
+test_that("kmcompareplot model curve is close to KM for a well-specified model", {
   set.seed(11)
   n <- 4000
   x <- rnorm(n)
@@ -102,7 +102,7 @@ test_that("km_compare_plot model curve is close to KM for a well-specified model
   fit <- rpsurv(survival::Surv(time, status) ~ x + z, data = d)
   grDevices::pdf(NULL)
   on.exit(grDevices::dev.off())
-  k <- km_compare_plot(fit, by = "z")
+  k <- kmcompareplot(fit, by = "z")
   for (g in c("a", "b")) {
     m <- k[k$group == g & k$curve == "model", ]
     km <- k[k$group == g & k$curve == "km", ]
@@ -116,7 +116,7 @@ test_that("km_compare_plot model curve is close to KM for a well-specified model
   }
 })
 
-test_that("km_compare_plot handles left truncation through the risk set", {
+test_that("kmcompareplot handles left truncation through the risk set", {
   set.seed(7)
   n <- 4000
   x <- rnorm(n)
@@ -129,7 +129,7 @@ test_that("km_compare_plot handles left truncation through the risk set", {
   fit <- rpsurv(survival::Surv(entry, time, status) ~ x, data = d)
   grDevices::pdf(NULL)
   on.exit(grDevices::dev.off())
-  k <- km_compare_plot(fit)
+  k <- kmcompareplot(fit)
   m <- k[k$curve == "model", ]
   km <- k[k$curve == "km", ]
   km_at <- stats::stepfun(km$time[-1], km$surv)(m$time)
@@ -148,11 +148,11 @@ test_that("km_compare_plot handles left truncation through the risk set", {
                rpsurv:::rp_average_survival(f_rc, idx, grid, TRUE), tolerance = 1e-3)
 })
 
-test_that("coxsnell_plot uses Nelson-Aalen and a square frame with the y = x line", {
+test_that("coxsnellplot uses Nelson-Aalen and a square frame with the y = x line", {
   fit <- rpsurv(survival::Surv(time, status) ~ trt + karno, data = veteran)
   grDevices::pdf(NULL)
   on.exit(grDevices::dev.off())
-  cs <- coxsnell_plot(fit)
+  cs <- coxsnellplot(fit)
   na <- survival::survfit(survival::Surv(residuals(fit), veteran$status) ~ 1, ctype = 1)
   expect_equal(cs$cumhaz, na$cumhaz)
   usr <- graphics::par("usr")
@@ -180,9 +180,9 @@ test_that("plot(type = 'coxsnell' / 'km') dispatches to the diagnostic plots", {
   fit <- rpsurv(survival::Surv(time, status) ~ trt + celltype, data = veteran, df = 3)
   pdf(NULL)
   on.exit(grDevices::dev.off())
-  expect_identical(plot(fit, type = "coxsnell"), coxsnell_plot(fit))
-  expect_identical(plot(fit, type = "km", by = "celltype"), km_compare_plot(fit, by = "celltype"))
-  expect_identical(plot(fit, type = "km"), km_compare_plot(fit))
+  expect_identical(plot(fit, type = "coxsnell"), coxsnellplot(fit))
+  expect_identical(plot(fit, type = "km", by = "celltype"), kmcompareplot(fit, by = "celltype"))
+  expect_identical(plot(fit, type = "km"), kmcompareplot(fit))
   expect_error(plot(fit, type = "coxsnell", newdata = veteran[1, ]), "does not apply")
   expect_error(plot(fit, type = "km", times = 1:10, ci = FALSE), "do not apply")
   expect_error(plot(fit, type = "coxsnell", by = "celltype"), "type = \"km\" only")

@@ -141,12 +141,12 @@ plot(fit_vet, newdata = data.frame(trt = 1, celltype = levels(veteran$celltype))
 linear predictor), or `"hr"` (the instantaneous hazard ratio of
 `newdata` versus `newdata0`, correct under time-varying effects), with
 `se.fit = TRUE` adding delta-method 95% confidence limits for
-`"survival"`, `"cumhaz"`, and `"link"`. `rmst_diff()` gives the
+`"survival"`, `"cumhaz"`, and `"link"`. `rmstdiff()` gives the
 difference in restricted mean survival time between two covariate
 profiles, with a delta-method confidence interval:
 
 ``` r
-rmst_diff(fit, newdata = data.frame(hormon = 1), newdata0 = data.frame(hormon = 0),
+rmstdiff(fit, newdata = data.frame(hormon = 1), newdata0 = data.frame(hormon = 0),
           tau = 2000, se.fit = TRUE)
 #>        est       se    lower    upper
 #> 1 161.5922 53.52856 56.67811 266.5062
@@ -245,7 +245,7 @@ the Nelson-Aalen cumulative hazard of the Cox-Snell residuals against
 the residuals: a well-fitting model follows the diagonal. `type = "km"`
 overlays the Kaplan-Meier estimate (solid) on the model’s average
 predicted survival over the same subjects (dashed), overall or by group.
-They are the same plots as `coxsnell_plot()` and `km_compare_plot()`:
+They are the same plots as `coxsnellplot()` and `kmcompareplot()`:
 
 ``` r
 op <- par(mfrow = c(1, 2))

@@ -377,19 +377,19 @@ predict.rpsurv <- function(object, newdata = NULL, newdata0 = NULL, times = NULL
 #'   x1 = rbinom(200, 1, 0.5), x2 = rnorm(200)
 #' )
 #' fit <- rpsurv(survival::Surv(time, status) ~ x1 + x2, data = dat, tve = "x1")
-#' rmst_diff(fit, newdata = data.frame(x1 = 1, x2 = 0),
+#' rmstdiff(fit, newdata = data.frame(x1 = 1, x2 = 0),
 #'           newdata0 = data.frame(x1 = 0, x2 = 0), tau = 4, se.fit = TRUE)
 #'
 #' # one conditional contrast per row
 #' nd <- data.frame(x2 = c(-1, 0, 1))
-#' rmst_diff(fit, transform(nd, x1 = 1), transform(nd, x1 = 0), tau = 4, se.fit = TRUE)
+#' rmstdiff(fit, transform(nd, x1 = 1), transform(nd, x1 = 0), tau = 4, se.fit = TRUE)
 #'
 #' # marginal (standardised) contrast over the sample
-#' rmst_diff(fit, transform(dat, x1 = 1), transform(dat, x1 = 0), tau = 4,
+#' rmstdiff(fit, transform(dat, x1 = 1), transform(dat, x1 = 0), tau = 4,
 #'           se.fit = TRUE, marginal = TRUE)
 #' }
 #' @export
-rmst_diff <- function(object, newdata, newdata0, tau, se.fit = FALSE, n_grid = 200,
+rmstdiff <- function(object, newdata, newdata0, tau, se.fit = FALSE, n_grid = 200,
                       marginal = FALSE) {
   stopifnot(inherits(object, "rpsurv"))
   if (!is.numeric(tau) || length(tau) != 1L || !is.finite(tau) || tau <= 0) {

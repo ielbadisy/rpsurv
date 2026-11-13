@@ -74,7 +74,7 @@ test_that("non-positive times are rejected instead of giving NaN", {
   fit <- rpsurv(survival::Surv(time, status) ~ trt + karno, data = veteran, tve = "karno")
   expect_error(predict(fit, newdata = data.frame(trt = 1, karno = 60), times = c(0, 1)), "positive")
   expect_error(tvecurve(fit, "karno", times = c(0, 1)), "positive")
-  expect_error(rmst_diff(fit, data.frame(trt = 1, karno = 60), data.frame(trt = 0, karno = 60),
+  expect_error(rmstdiff(fit, data.frame(trt = 1, karno = 60), data.frame(trt = 0, karno = 60),
                          tau = -1), "positive")
 })
 

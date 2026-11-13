@@ -1,3 +1,13 @@
+# rpsurv 0.8.4
+
+* Exported functions were renamed to glued lowercase names (no underscores). The old names still work but are deprecated and will be removed in a future release.
+
+| Old | New |
+|---|---|
+| `coxsnell_plot()` | `coxsnellplot()` |
+| `km_compare_plot()` | `kmcompareplot()` |
+| `rmst_diff()` | `rmstdiff()` |
+
 # rpsurv 0.8.3
 
 * `rmst_diff()` accepts a multi-row `newdata` (with a `newdata0` of the same number of rows) and returns one conditional contrast per row, each with its delta-method standard error, in a data frame with a leading `id` column. Previously only one-row data were allowed. A one-row call returns the same one-row data frame as before.
