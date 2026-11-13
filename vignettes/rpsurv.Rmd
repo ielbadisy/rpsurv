@@ -259,7 +259,7 @@ truncation (delayed entry) when the covariate values do not change.
 # Diagnostics
 
 The two goodness-of-fit plots are `plot()` types, like the predicted
-curves (`coxsnell_plot()` and `km_compare_plot()` draw the same plots):
+curves (`coxsnellplot()` and `kmcompareplot()` draw the same plots):
 
 ```{r diagnostics, fig.cap = "Cox-Snell residual check: points should lie near the diagonal."}
 plot(fit, type = "coxsnell")

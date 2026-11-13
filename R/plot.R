@@ -2,8 +2,8 @@
 #'
 #' Draws predicted survival, hazard or cumulative hazard curves for
 #' covariate profiles, or one of the two goodness-of-fit diagnostics:
-#' `type = "coxsnell"` calls [coxsnell_plot()] and `type = "km"` calls
-#' [km_compare_plot()].
+#' `type = "coxsnell"` calls [coxsnellplot()] and `type = "km"` calls
+#' [kmcompareplot()].
 #'
 #' @param x a fitted `"rpsurv"` object.
 #' @param newdata covariate profile(s) to plot, one row per curve, on the
@@ -12,8 +12,8 @@
 #'   and each factor, character or logical variable at its most common
 #'   value in the fitted data.
 #' @param type one of `"survival"`, `"hazard"`, `"cumhaz"` (predicted
-#'   curves), `"coxsnell"` (Cox-Snell residual plot, see [coxsnell_plot()])
-#'   or `"km"` (Kaplan-Meier vs model, see [km_compare_plot()]). The
+#'   curves), `"coxsnell"` (Cox-Snell residual plot, see [coxsnellplot()])
+#'   or `"km"` (Kaplan-Meier vs model, see [kmcompareplot()]). The
 #'   diagnostics use the fitted data, so `newdata`, `times` and `ci` do not
 #'   apply to them.
 #' @param times times at which to evaluate the curve(s). Defaults to 100
@@ -28,12 +28,12 @@
 #'   curves cross least. For `type = "km"` the legend is drawn by default.
 #' @param by for `type = "km"` only: optional grouping, the name of a
 #'   variable of the model formula or a vector with one value per
-#'   observation used in the fit (see [km_compare_plot()]).
+#'   observation used in the fit (see [kmcompareplot()]).
 #' @param ... further arguments passed to [graphics::plot()], such as
 #'   `ylim` or `main` (and `n_grid` for `type = "km"`).
 #' @return Called for its side effect of drawing the plot. For the
-#'   diagnostics, invisibly returns the value of [coxsnell_plot()] or
-#'   [km_compare_plot()]. For predicted curves, invisibly returns the
+#'   diagnostics, invisibly returns the value of [coxsnellplot()] or
+#'   [kmcompareplot()]. For predicted curves, invisibly returns the
 #'   `data.frame` of predictions produced by [predict.rpsurv()], with columns `id` (row of `newdata`), `time`,
 #'   `est`, and, when `ci = TRUE`, `lower` and `upper` for the 95%
 #'   confidence band. These are exactly the plotted values.
@@ -59,9 +59,9 @@ plot.rpsurv <- function(x, newdata = NULL,
     }
     if (type == "coxsnell") {
       if (!is.null(by)) stop("`by` applies to type = \"km\" only.", call. = FALSE)
-      return(coxsnell_plot(x, ...))
+      return(coxsnellplot(x, ...))
     }
-    return(km_compare_plot(x, by = by, col = col,
+    return(kmcompareplot(x, by = by, col = col,
                            legend = if (is.null(legend)) TRUE else legend, ...))
   }
   if (!is.null(by)) stop("`by` applies to type = \"km\" only.", call. = FALSE)

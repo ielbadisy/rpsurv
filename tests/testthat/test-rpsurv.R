@@ -59,13 +59,13 @@ test_that("residuals and print/summary methods run without error", {
   expect_output(print(summary(fit)))
 })
 
-test_that("km_compare_plot and coxsnell_plot run without error", {
+test_that("kmcompareplot and coxsnellplot run without error", {
   d <- get_brcancer()
   fit <- rpsurv(survival::Surv(rectime, censrec) ~ hormon, data = d, df = 4)
   tmp <- tempfile(fileext = ".png")
   grDevices::png(tmp)
-  expect_error(km_compare_plot(fit, by = "hormon"), NA)
-  expect_error(coxsnell_plot(fit), NA)
+  expect_error(kmcompareplot(fit, by = "hormon"), NA)
+  expect_error(coxsnellplot(fit), NA)
   grDevices::dev.off()
   unlink(tmp)
 })
@@ -187,12 +187,12 @@ test_that("predict(se.fit = TRUE) works for hazard, hr and sdiff and gives sane 
   expect_true(all(sd$est >= -1 & sd$est <= 1))
 })
 
-test_that("rmst_diff matches a manual trapezoidal integral of predict(type = 'sdiff') and has a sane SE", {
+test_that("rmstdiff matches a manual trapezoidal integral of predict(type = 'sdiff') and has a sane SE", {
   d <- get_brcancer()
   fit <- rpsurv(survival::Surv(rectime, censrec) ~ hormon, data = d, df = 4, tve = "hormon", tve.df = 3)
   tau <- 1500
 
-  rd <- rmst_diff(fit, newdata = data.frame(hormon = 1), newdata0 = data.frame(hormon = 0),
+  rd <- rmstdiff(fit, newdata = data.frame(hormon = 1), newdata0 = data.frame(hormon = 0),
                    tau = tau, se.fit = TRUE, n_grid = 300)
   expect_true(rd$se > 0)
   expect_true(rd$lower <= rd$est && rd$est <= rd$upper)
@@ -342,28 +342,28 @@ test_that("summary() baseline table has no exp(coef) and prints without scientif
   expect_true(any(grepl("n = 686, number of events = 299, parameters = 6", out, fixed = TRUE)))
 })
 
-test_that("rmst_diff gives one conditional contrast per row of a multi-row newdata", {
+test_that("rmstdiff gives one conditional contrast per row of a multi-row newdata", {
   d <- get_brcancer()
   fit <- rpsurv(survival::Surv(rectime, censrec) ~ hormon + x1, data = d, df = 4,
                 tve = "hormon", tve.df = 2)
   nd <- data.frame(x1 = c(40, 55, 70))
-  rc <- rmst_diff(fit, transform(nd, hormon = 1), transform(nd, hormon = 0),
+  rc <- rmstdiff(fit, transform(nd, hormon = 1), transform(nd, hormon = 0),
                   tau = 1500, se.fit = TRUE)
   expect_named(rc, c("id", "est", "se", "lower", "upper"))
   expect_equal(rc$id, 1:3)
   for (i in 1:3) {
-    one <- rmst_diff(fit, data.frame(hormon = 1, x1 = nd$x1[i]), data.frame(hormon = 0, x1 = nd$x1[i]),
+    one <- rmstdiff(fit, data.frame(hormon = 1, x1 = nd$x1[i]), data.frame(hormon = 0, x1 = nd$x1[i]),
                      tau = 1500, se.fit = TRUE)
     expect_named(one, c("est", "se", "lower", "upper"))
     expect_equal(unlist(rc[i, -1]), unlist(one), ignore_attr = TRUE)
   }
-  expect_error(rmst_diff(fit, transform(nd, hormon = 1), data.frame(hormon = 0, x1 = 40), tau = 1500),
+  expect_error(rmstdiff(fit, transform(nd, hormon = 1), data.frame(hormon = 0, x1 = 40), tau = 1500),
                "same number of rows")
-  expect_error(rmst_diff(fit, transform(nd, hormon = 1), transform(nd, hormon = 0), tau = 1500,
+  expect_error(rmstdiff(fit, transform(nd, hormon = 1), transform(nd, hormon = 0), tau = 1500,
                          marginal = NA), "marginal")
 })
 
-test_that("conditional rmst_diff matches rstpm2 predict(type = 'rmstdiff')", {
+test_that("conditional rmstdiff matches rstpm2 predict(type = 'rmstdiff')", {
   skip_if_not_installed("rstpm2")
   suppressPackageStartupMessages(library(rstpm2)) # stpm2() calls internal gsm() unqualified
   d <- get_brcancer()
@@ -372,7 +372,7 @@ test_that("conditional rmst_diff matches rstpm2 predict(type = 'rmstdiff')", {
   ref <- rstpm2::stpm2(survival::Surv(rectime, censrec) ~ hormon + x1, data = d, df = 4,
                        tvc = list(hormon = 2))
   nd <- data.frame(x1 = c(40, 55, 70))
-  rc <- rmst_diff(fit, transform(nd, hormon = 1), transform(nd, hormon = 0),
+  rc <- rmstdiff(fit, transform(nd, hormon = 1), transform(nd, hormon = 0),
                   tau = 1500, se.fit = TRUE, n_grid = 2000)
   # call the S4 method directly (dispatch from a package namespace is
   # unreliable under R CMD check); rstpm2 reports unexposed minus exposed
@@ -384,14 +384,14 @@ test_that("conditional rmst_diff matches rstpm2 predict(type = 'rmstdiff')", {
   expect_equal(rc$se, (rr$upper - rr$lower) / (2 * stats::qnorm(0.975)), tolerance = 1e-3)
 })
 
-test_that("marginal rmst_diff averages the row contrasts, with the averaged-gradient SE", {
+test_that("marginal rmstdiff averages the row contrasts, with the averaged-gradient SE", {
   d <- get_brcancer()
   fit <- rpsurv(survival::Surv(rectime, censrec) ~ hormon + x1, data = d, df = 4,
                 tve = "hormon", tve.df = 2)
   nd <- d[1:25, ]
   d1 <- transform(nd, hormon = 1); d0 <- transform(nd, hormon = 0)
-  rc <- rmst_diff(fit, d1, d0, tau = 1500, se.fit = TRUE)
-  m <- rmst_diff(fit, d1, d0, tau = 1500, se.fit = TRUE, marginal = TRUE)
+  rc <- rmstdiff(fit, d1, d0, tau = 1500, se.fit = TRUE)
+  m <- rmstdiff(fit, d1, d0, tau = 1500, se.fit = TRUE, marginal = TRUE)
   expect_named(m, c("est", "se", "lower", "upper"))
   expect_equal(nrow(m), 1L)
   expect_equal(m$est, mean(rc$est), tolerance = 1e-10)
@@ -400,7 +400,7 @@ test_that("marginal rmst_diff averages the row contrasts, with the averaged-grad
   # numerical gradient of the marginal estimate wrt the coefficients
   f_est <- function(b) {
     g <- fit; g$coefficients <- b
-    rmst_diff(g, d1, d0, tau = 1500, marginal = TRUE)$est
+    rmstdiff(g, d1, d0, tau = 1500, marginal = TRUE)$est
   }
   b <- fit$coefficients
   grad <- vapply(seq_along(b), function(j) {

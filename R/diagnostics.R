@@ -58,7 +58,7 @@ residuals.rpsurv <- function(object, type = c("coxsnell", "martingale", "devianc
 #'   distinct Cox-Snell residuals) and `cumhaz` (their Nelson-Aalen
 #'   cumulative hazard), the coordinates of the plotted step function.
 #' @export
-coxsnell_plot <- function(object, ...) {
+coxsnellplot <- function(object, ...) {
   r <- residuals(object, type = "coxsnell")
   ok <- is.finite(r)
   fit <- survival::survfit(survival::Surv(r[ok], object$status[ok]) ~ 1, ctype = 1)
@@ -121,10 +121,10 @@ coxsnell_plot <- function(object, ...) {
 #' @examples
 #' \donttest{
 #' fit <- rpsurv(survival::Surv(time, status) ~ trt + celltype, data = veteran)
-#' km_compare_plot(fit, by = "celltype")
+#' kmcompareplot(fit, by = "celltype")
 #' }
 #' @export
-km_compare_plot <- function(object, by = NULL, col = NULL, n_grid = 200,
+kmcompareplot <- function(object, by = NULL, col = NULL, n_grid = 200,
                             legend = TRUE, ...) {
   n <- length(object$time)
   by_name <- NULL
