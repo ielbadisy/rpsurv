@@ -75,7 +75,7 @@ v_j(x) = (x - k_j)_+^3 - \lambda_j (x - k_{\min})_+^3 - (1-\lambda_j)(x - k_{\ma
 \lambda_j = \frac{k_{\max} - k_j}{k_{\max} - k_{\min}},
 $$
 
-with $(u)_+ = \max(u, 0)$. This is exactly the basis in `rcs_basis()`
+with $(u)_+ = \max(u, 0)$. This is exactly the basis in `rcsbasis()`
 (`R/splines.R`); by construction $s(x)$ is linear beyond the boundary
 knots, which keeps extrapolation well-behaved. Its derivative, needed for
 the hazard, is
@@ -86,7 +86,7 @@ $$
 
 Boundary knots default to the min/max of $\log t$ among **events**, and
 interior knots to equally spaced centiles of $\log t$ among events
-(`default_knots()`), matching `rstpm2`/`flexsurv` defaults.
+(`defaultknots()`), matching `rstpm2`/`flexsurv` defaults.
 
 ## Linear predictor and scales
 
@@ -312,7 +312,7 @@ Everything on the hot path of fitting is C++, not just the likelihood sum:
   full data passes per iteration for the *same* point; `rpsurv` caches the
   fused C++ result keyed on the parameter vector, so each distinct point
   is evaluated exactly once;
-* the restricted cubic spline basis itself (`rcs_basis()`, both the basis
+* the restricted cubic spline basis itself (`rcsbasis()`, both the basis
   and its derivative) is computed by `rcs_basis_cpp()` in C++ rather than
   with R's vectorised-but-still-interpreted arithmetic;
 * the closed-form starting values (`rp_start_values()`) are computed from

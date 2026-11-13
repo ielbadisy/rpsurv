@@ -18,7 +18,7 @@ interior knots in between), already sorted.}
 an \verb{n x (length(knots) - 1)} matrix.
 }
 \description{
-Same basis as \code{rcs_basis()} (Durrleman-Simon / Royston-Parmar
+Same basis as \code{rcsbasis()} (Durrleman-Simon / Royston-Parmar
 parameterisation): a linear term plus one term per interior knot.
 }
 \keyword{internal}

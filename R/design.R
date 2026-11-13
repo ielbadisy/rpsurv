@@ -10,9 +10,9 @@
 #' @keywords internal
 rp_design <- function(log_time, cov_data, knots, tve = NULL, tve_knots = NULL,
                       nle = NULL, nle_knots = NULL) {
-  p_base <- ncol(rcs_basis(log_time, knots))
-  X_base <- cbind(1, rcs_basis(log_time, knots))
-  dX_base <- cbind(0, rcs_basis(log_time, knots, derivative = TRUE))
+  p_base <- ncol(rcsbasis(log_time, knots))
+  X_base <- cbind(1, rcsbasis(log_time, knots))
+  dX_base <- cbind(0, rcsbasis(log_time, knots, derivative = TRUE))
   colnames(X_base) <- colnames(dX_base) <- c("(Intercept)", paste0("s(logt)", seq_len(p_base)))
 
   has_cov <- !is.null(cov_data) && ncol(cov_data) > 0L
@@ -33,8 +33,8 @@ rp_design <- function(log_time, cov_data, knots, tve = NULL, tve_knots = NULL,
     for (i in seq_along(tve)) {
       var <- tve[i]
       k <- tve_knots[[var]]
-      basis <- rcs_basis(log_time, k)
-      dbasis <- rcs_basis(log_time, k, derivative = TRUE)
+      basis <- rcsbasis(log_time, k)
+      dbasis <- rcsbasis(log_time, k, derivative = TRUE)
       x <- cov_data[[var]]
       X_tve_list[[i]] <- basis * x
       dX_tve_list[[i]] <- dbasis * x
@@ -75,5 +75,5 @@ rp_cov_block <- function(cov_data, nle = NULL, nle_knots = NULL) {
 #' @keywords internal
 rp_nle_basis <- function(x, knots) {
   lo <- knots[1L]; w <- knots[length(knots)] - lo
-  rcs_basis((x - lo) / w, (knots - lo) / w)
+  rcsbasis((x - lo) / w, (knots - lo) / w)
 }

@@ -6,7 +6,7 @@ inline double pos2(double u) { return u > 0 ? u * u : 0.0; }
 
 //' Restricted cubic spline basis, computed in C++
 //'
-//' Same basis as `rcs_basis()` (Durrleman-Simon / Royston-Parmar
+//' Same basis as `rcsbasis()` (Durrleman-Simon / Royston-Parmar
 //' parameterisation): a linear term plus one term per interior knot.
 //'
 //' @param x numeric vector (typically log time).

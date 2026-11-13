@@ -338,62 +338,107 @@ predict.rpsurv <- function(object, newdata = NULL, newdata0 = NULL, times = NULL
 #' S(t | newdata0)` from 0 to `tau` by the trapezoidal rule, with an
 #' optional delta-method standard error and 95% confidence interval.
 #'
+#' Row `i` of `newdata` is contrasted with row `i` of `newdata0`. By
+#' default (`marginal = FALSE`) one conditional contrast is returned per
+#' row. With `marginal = TRUE`, the restricted mean survival times are
+#' averaged over the rows under each profile and their difference is
+#' returned: setting the exposure to each of its levels in the analysis
+#' data (for example `transform(data, trt = 1)` and
+#' `transform(data, trt = 0)`) gives the standardised (marginal,
+#' g-formula) RMST difference.
+#'
 #' @param object a fitted `"rpsurv"` object.
-#' @param newdata a one-row data frame, the contrast covariate profile
-#'   (on the original variables, as in [predict.rpsurv()]).
-#' @param newdata0 a one-row data frame, the reference covariate profile.
+#' @param newdata a data frame, the contrast covariate profiles (on the
+#'   original variables, as in [predict.rpsurv()]), one row per profile.
+#' @param newdata0 a data frame of reference covariate profiles, with the
+#'   same number of rows as `newdata`.
 #' @param tau numeric restriction time.
 #' @param se.fit logical; if `TRUE`, adds a delta-method standard error
 #'   and 95% confidence interval. The delta method is applied directly to
 #'   the trapezoidal-weighted sum of the survival-difference gradients
 #'   (a linear combination of the model coefficients' asymptotic normal
-#'   distribution stays normal), not by resampling.
+#'   distribution stays normal), not by resampling. For a marginal
+#'   contrast the gradient is the average of the row gradients; the
+#'   standard error treats the rows of `newdata` as fixed, so it does not
+#'   include the sampling variability of the covariate distribution
+#'   (usually small for a contrast; use the bootstrap if it matters).
 #' @param n_grid number of grid points used for the trapezoidal
 #'   integration (default 200).
-#' @return a one-row data frame with columns `est` and, if `se.fit =
-#'   TRUE`, `se`, `lower`, `upper`.
+#' @param marginal logical; if `TRUE`, return the marginal (standardised)
+#'   contrast averaged over the rows of `newdata` and `newdata0`.
+#' @return a data frame with columns `est` and, if `se.fit = TRUE`, `se`,
+#'   `lower`, `upper`. It has one row for a one-row `newdata` or for
+#'   `marginal = TRUE`; otherwise one row per row of `newdata`, with an
+#'   extra leading `id` column (the row number).
 #' @examples
 #' \donttest{
 #' dat <- data.frame(
-#'   time = rexp(200, 0.2), status = rbinom(200, 1, 0.7), x1 = rbinom(200, 1, 0.5)
+#'   time = rexp(200, 0.2), status = rbinom(200, 1, 0.7),
+#'   x1 = rbinom(200, 1, 0.5), x2 = rnorm(200)
 #' )
-#' fit <- rpsurv(survival::Surv(time, status) ~ x1, data = dat, tve = "x1")
-#' rmst_diff(fit, newdata = data.frame(x1 = 1), newdata0 = data.frame(x1 = 0),
-#'           tau = 4, se.fit = TRUE)
+#' fit <- rpsurv(survival::Surv(time, status) ~ x1 + x2, data = dat, tve = "x1")
+#' rmst_diff(fit, newdata = data.frame(x1 = 1, x2 = 0),
+#'           newdata0 = data.frame(x1 = 0, x2 = 0), tau = 4, se.fit = TRUE)
+#'
+#' # one conditional contrast per row
+#' nd <- data.frame(x2 = c(-1, 0, 1))
+#' rmst_diff(fit, transform(nd, x1 = 1), transform(nd, x1 = 0), tau = 4, se.fit = TRUE)
+#'
+#' # marginal (standardised) contrast over the sample
+#' rmst_diff(fit, transform(dat, x1 = 1), transform(dat, x1 = 0), tau = 4,
+#'           se.fit = TRUE, marginal = TRUE)
 #' }
 #' @export
-rmst_diff <- function(object, newdata, newdata0, tau, se.fit = FALSE, n_grid = 200) {
-  stopifnot(inherits(object, "rpsurv"), nrow(newdata) == 1, nrow(newdata0) == 1)
+rmst_diff <- function(object, newdata, newdata0, tau, se.fit = FALSE, n_grid = 200,
+                      marginal = FALSE) {
+  stopifnot(inherits(object, "rpsurv"))
   if (!is.numeric(tau) || length(tau) != 1L || !is.finite(tau) || tau <= 0) {
     stop("`tau` must be a single positive, finite number", call. = FALSE)
   }
   if (!is.numeric(n_grid) || length(n_grid) != 1L || n_grid < 2) {
     stop("`n_grid` must be a single number >= 2", call. = FALSE)
   }
+  if (!is.logical(marginal) || length(marginal) != 1L || is.na(marginal)) {
+    stop("`marginal` must be TRUE or FALSE", call. = FALSE)
+  }
+  cov1 <- rp_newdata_cov(object, newdata, "newdata")
+  cov0 <- rp_newdata_cov(object, newdata0, "newdata0")
+  n <- nrow(cov1)
+  if (n < 1L || nrow(cov0) != n) {
+    stop("`newdata` and `newdata0` must have the same number of rows (at least one).", call. = FALSE)
+  }
+
   grid <- seq(0, tau, length.out = n_grid)
   grid[1] <- max(grid[1], .Machine$double.eps) # avoid log(0) in the design
   log_grid <- log(grid)
-
-  cov1 <- rp_newdata_cov(object, newdata, "newdata")[1, , drop = FALSE]
-  cov0 <- rp_newdata_cov(object, newdata0, "newdata0")[1, , drop = FALSE]
-  d1 <- rp_predict_design(object, cov1, log_grid)
-  d0 <- rp_predict_design(object, cov0, log_grid)
-  sdiff <- d1$S - d0$S
-
   w <- diff(grid)
   trapw <- c(0, w / 2) + c(w / 2, 0) # standard trapezoidal node weights
-  est <- sum(trapw * sdiff)
+
+  est <- numeric(n)
+  G <- matrix(0, n, length(object$coefficients))
+  for (i in seq_len(n)) {
+    d1 <- rp_predict_design(object, cov1[i, , drop = FALSE], log_grid)
+    d0 <- rp_predict_design(object, cov0[i, , drop = FALSE], log_grid)
+    est[i] <- sum(trapw * (d1$S - d0$S))
+    if (se.fit) {
+      grad <- rp_grad_surv(d1, object$scale) - rp_grad_surv(d0, object$scale)
+      G[i, ] <- as.numeric(trapw %*% grad) # linear combination -> single gradient vector
+    }
+  }
+  if (marginal) {
+    est <- mean(est)
+    G <- matrix(colMeans(G), nrow = 1L)
+  }
 
   out <- data.frame(est = est)
   if (se.fit) {
-    grad <- rp_grad_surv(d1, object$scale) - rp_grad_surv(d0, object$scale)
-    grad_w <- as.numeric(trapw %*% grad) # linear combination -> single gradient vector
-    se <- rp_delta_se(matrix(grad_w, nrow = 1L), object$vcov)
+    se <- rp_delta_se(G, object$vcov)
     z <- stats::qnorm(0.975)
     out$se <- se
     out$lower <- est - z * se
     out$upper <- est + z * se
   }
-  rp_check_output(est, if (se.fit) out$se, object$vcov)
+  rp_check_output(out$est, if (se.fit) out$se, object$vcov)
+  if (nrow(out) > 1L) out <- cbind(id = seq_len(nrow(out)), out)
   out
 }

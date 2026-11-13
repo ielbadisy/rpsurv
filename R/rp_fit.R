@@ -206,7 +206,7 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
   }
 
   if (is.null(knots)) {
-    knots <- default_knots(log_time[status == 1], df)
+    knots <- defaultknots(log_time[status == 1], df)
   } else {
     knots <- sort(knots)
     if (length(knots) < 2L || any(!is.finite(knots))) {
@@ -220,7 +220,7 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
   tve_knots <- NULL
   if (!is.null(tve) && length(tve)) {
     tve_knots <- stats::setNames(
-      lapply(tve, function(v) default_knots(log_time[status == 1], rp_term_df(tve.df, v, "tve.df"))),
+      lapply(tve, function(v) defaultknots(log_time[status == 1], rp_term_df(tve.df, v, "tve.df"))),
       tve
     )
   }
@@ -234,7 +234,7 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
         if (length(unique(x)) < k + 2L) {
           stop("`nle` covariate ", v, " has too few distinct values for nle.df = ", k, call. = FALSE)
         }
-        default_knots(x, k)
+        defaultknots(x, k)
       }),
       nle
     )

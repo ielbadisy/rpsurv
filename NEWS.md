@@ -1,3 +1,9 @@
+# rpsurv 0.8.3
+
+* `rmst_diff()` accepts a multi-row `newdata` (with a `newdata0` of the same number of rows) and returns one conditional contrast per row, each with its delta-method standard error, in a data frame with a leading `id` column. Previously only one-row data were allowed. A one-row call returns the same one-row data frame as before.
+* `rmst_diff()` gains `marginal = TRUE` for a marginal (standardised) contrast: the restricted mean survival times are averaged over the rows of `newdata` and of `newdata0`, for example the analysis data with the exposure set to each level, with a delta-method standard error from the averaged gradient. Conditional values agree with `rstpm2` (`predict(type = "rmstdiff")`) and the marginal standard error agrees with a nonparametric bootstrap.
+* The spline helpers are exported and documented as `rcsbasis()` (restricted cubic spline basis and its derivative) and `defaultknots()` (default knot placement); they were the internal `rcs_basis()` and `default_knots()`. `defaultknots()` returns the same knots as `rstpm2::stpm2()`, and `rcsbasis()` spans the same space as `rstpm2::nsx()` on the same knots.
+
 # rpsurv 0.8.2
 
 * `plot()` gains `type = "coxsnell"` and `type = "km"` (with a `by` argument), so every built-in plot goes through `plot()`. They draw the same plots as `coxsnell_plot()` and `km_compare_plot()`, which are kept. Arguments that do not apply to a diagnostic (`newdata`, `times`, `ci`) give an error rather than being ignored.
