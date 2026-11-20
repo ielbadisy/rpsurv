@@ -13,6 +13,7 @@
   ci = TRUE,
   col = NULL,
   legend = NULL,
+  labels = NULL,
   ...
 )
 }
@@ -27,7 +28,9 @@ variables at their mean and factors at their most common value, as in \code{\lin
 
 \item{newdata0}{reference profile(s) for \code{type = "shr"}.}
 
-\item{times, ci, col, legend, ...}{as in \code{\link[=plot.rpsurv]{plot.rpsurv()}}.}
+\item{times, ci, col, legend, labels, ...}{as in \code{\link[=plot.rpsurv]{plot.rpsurv()}}: \code{legend} is \code{TRUE}, \code{FALSE} or a
+position, and custom curve labels go in \code{labels = c("Remission", "Relapse")} (or \verb{legend =} a
+vector of labels).}
 }
 \value{
 invisibly, the plotted predictions (see \code{\link[=predict.rpcr]{predict.rpcr()}}).

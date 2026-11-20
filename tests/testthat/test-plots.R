@@ -188,3 +188,31 @@ test_that("plot(type = 'coxsnell' / 'km') dispatches to the diagnostic plots", {
   expect_error(plot(fit, type = "coxsnell", by = "celltype"), "type = \"km\" only")
   expect_error(plot(fit, by = "celltype"), "type = \"km\" only")
 })
+
+test_that("custom legend labels in plot.rpsurv and plot.rpcr", {
+  nd <- data.frame(trt = c(1, 2))
+  ls <- rpsurv:::rp_legend_spec
+  expect_equal(ls(NULL, NULL, nd), list(legend = TRUE, labels = c("trt = 1", "trt = 2")))
+  expect_equal(ls("topright", NULL, nd)$legend, "topright")
+  expect_equal(ls(c("A", "B"), NULL, nd), list(legend = TRUE, labels = c("A", "B")))
+  expect_equal(ls("left", c("A", "B"), nd), list(legend = "left", labels = c("A", "B")))
+  expect_false(ls(FALSE, c("A", "B"), nd)$legend)
+  expect_equal(ls(NULL, "Only", nd[1, , drop = FALSE]), list(legend = TRUE, labels = "Only"))
+  expect_false(ls(NULL, NULL, nd[1, , drop = FALSE])$legend)
+  expect_error(ls(NULL, "A", nd), "one entry per row")
+
+  fit <- rpsurv(survival::Surv(time, status) ~ trt, data = veteran)
+  pdf(NULL); on.exit(dev.off())
+  p0 <- plot(fit, newdata = nd)
+  expect_equal(plot(fit, newdata = nd, labels = c("Standard", "Test")), p0)
+  expect_equal(plot(fit, newdata = nd, legend = c("Standard", "Test")), p0)
+  expect_error(plot(fit, type = "coxsnell", labels = "a"), "do(es)? not apply")
+  set.seed(1); n <- 300
+  d <- data.frame(x = rbinom(n, 1, 0.5), t1 = rexp(n, 0.1), t2 = rexp(n, 0.1), c = runif(n, 0, 20))
+  d$time <- pmin(d$t1, d$t2, d$c)
+  d$status <- factor(ifelse(d$c < pmin(d$t1, d$t2), 0, ifelse(d$t1 < d$t2, 1, 2)))
+  cr <- rpcr(survival::Surv(time, status) ~ x, data = d, cause = "1", df = 2)
+  q0 <- plot(cr, newdata = data.frame(x = 0:1))
+  expect_equal(plot(cr, newdata = data.frame(x = 0:1), legend = c("Remission", "Relapse")), q0)
+  expect_equal(plot(cr, newdata = data.frame(x = 0:1), labels = c("Remission", "Relapse"), legend = "topleft"), q0)
+})
