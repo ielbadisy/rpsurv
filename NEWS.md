@@ -1,3 +1,10 @@
+# rpsurv 0.8.5
+
+* New `rpcr()`: a flexible parametric Fine-Gray model for competing risks, a Royston-Parmar model for the subdistribution hazard of one cause fitted by inverse-probability-of-censoring weighted likelihood (Lambert, Wilkes and Crowther, 2017). It gives subdistribution hazard ratios with a subject-clustered robust variance, and a smooth cumulative incidence function. The subdistribution hazard ratios and their standard errors agree with `cmprsk::crr()`, and the cumulative incidence with the Aalen-Johansen estimate. `tve`, `nle` and the odds and probit scales work as in `rpsurv()`.
+* New `predict.rpcr()` (`type = "cif"`, `"cifdiff"`, `"shr"`, `"link"`, with delta-method limits) and `plot.rpcr()` (`type = "cif"` or `"shr"`).
+* `rpsurv()` gains `weights` for case weights. Integer weights give the same fit as replicated rows.
+* `AIC()` and `BIC()` with several models now return a data frame with one row per model and columns `df` and `AIC` (or `BIC`), as `stats::AIC()` does. Previously only the first model's value was returned. A single model still gives a single value.
+
 # rpsurv 0.8.4
 
 * Exported functions were renamed to glued lowercase names (no underscores). The old names still work but are deprecated and will be removed in a future release.

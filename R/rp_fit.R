@@ -90,6 +90,12 @@ rp_start_values <- function(time, status, p, scale, max_n = 20000L) {
 #'   covariate. Default 3.
 #' @param scale one of `"hazard"` (proportional hazards, the Royston-Parmar
 #'   default), `"odds"` (proportional odds) or `"normal"` (probit).
+#' @param weights optional case weights: a numeric vector with one non-negative value per row of `data`,
+#'   or the name of a column of `data` (evaluated like `weights` in [stats::lm()]). Each row's
+#'   log-likelihood contribution is multiplied by its weight, so integer weights give the same fit as
+#'   replicating rows. The variance is the inverse Hessian of the weighted log-likelihood (right for
+#'   frequency weights); for sampling or inverse-probability weights use a robust variance, as
+#'   [rpcr()] does.
 #' @param control list of control parameters passed to [stats::optim()].
 #'   The optimisation runs on an internal orthogonalised parameterisation
 #'   (see Details), so parameter-scale settings such as `parscale` or
@@ -128,8 +134,10 @@ rp_start_values <- function(time, status, p, scale, max_n = 20000L) {
 #' @return an object of class `"rpsurv"`.
 #' @export
 rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
-                    nle = NULL, nle.df = 3, scale = c("hazard", "odds", "normal"), control = list()) {
+                    nle = NULL, nle.df = 3, scale = c("hazard", "odds", "normal"), control = list(),
+                    weights = NULL) {
   scale <- match.arg(scale)
+  w <- eval(substitute(weights), data, parent.frame())
   scale_code <- rp_scale_code(scale)
 
   mf <- stats::model.frame(formula, data)
@@ -147,6 +155,12 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
     entry <- rep(0, nrow(resp))
     time <- resp[, 1L]
     status <- resp[, 2L]
+  }
+  if (is.null(w)) w <- rep(1, length(time)) else {
+    if (length(na <- attr(mf, "na.action"))) w <- w[-as.integer(na)]
+    if (length(w) != length(time) || any(!is.finite(w) | w < 0)) {
+      stop("`weights` must be finite, non-negative and one per row of `data`", call. = FALSE)
+    }
   }
   if (any(time <= 0)) stop("all exit times must be > 0", call. = FALSE)
   if (!any(status == 1)) stop("no events in the data: the model cannot be fitted", call. = FALSE)
@@ -273,7 +287,7 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
   cache <- new.env(parent = emptyenv())
   evaluate <- function(gamma) {
     if (is.null(cache$gamma) || !identical(gamma, cache$gamma)) {
-      cache$result <- rp_negloglik_grad_cpp(gamma, Z, dZ, Zentry, has_entry, log_time, status_num, scale_code)
+      cache$result <- rp_negloglik_grad_cpp(gamma, Z, dZ, Zentry, has_entry, log_time, status_num, scale_code, w)
       cache$gamma <- gamma
     }
     cache$result
@@ -327,6 +341,7 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
       entry = entry,
       has_entry = has_entry,
       status = status,
+      weights = w,
       log_time = log_time,
       cov_data = cov_data,
       cov_terms = cov_tt,

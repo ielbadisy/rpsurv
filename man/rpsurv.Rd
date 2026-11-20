@@ -14,7 +14,8 @@ rpsurv(
   nle = NULL,
   nle.df = 3,
   scale = c("hazard", "odds", "normal"),
-  control = list()
+  control = list(),
+  weights = NULL
 )
 }
 \arguments{
@@ -63,6 +64,13 @@ default), \code{"odds"} (proportional odds) or \code{"normal"} (probit).}
 The optimisation runs on an internal orthogonalised parameterisation
 (see Details), so parameter-scale settings such as \code{parscale} or
 \code{ndeps} refer to that parameterisation.}
+
+\item{weights}{optional case weights: a numeric vector with one non-negative value per row of \code{data},
+or the name of a column of \code{data} (evaluated like \code{weights} in \code{\link[stats:lm]{stats::lm()}}). Each row's
+log-likelihood contribution is multiplied by its weight, so integer weights give the same fit as
+replicating rows. The variance is the inverse Hessian of the weighted log-likelihood (right for
+frequency weights); for sampling or inverse-probability weights use a robust variance, as
+\code{\link[=rpcr]{rpcr()}} does.}
 }
 \value{
 an object of class \code{"rpsurv"}.

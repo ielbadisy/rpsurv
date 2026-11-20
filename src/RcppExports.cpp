@@ -24,8 +24,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // rp_negloglik_grad_cpp
-List rp_negloglik_grad_cpp(NumericVector beta, NumericMatrix X, NumericMatrix dX, NumericMatrix Xentry, NumericVector hasEntry, NumericVector logtime, NumericVector status, int scale);
-RcppExport SEXP _rpsurv_rp_negloglik_grad_cpp(SEXP betaSEXP, SEXP XSEXP, SEXP dXSEXP, SEXP XentrySEXP, SEXP hasEntrySEXP, SEXP logtimeSEXP, SEXP statusSEXP, SEXP scaleSEXP) {
+List rp_negloglik_grad_cpp(NumericVector beta, NumericMatrix X, NumericMatrix dX, NumericMatrix Xentry, NumericVector hasEntry, NumericVector logtime, NumericVector status, int scale, NumericVector weights);
+RcppExport SEXP _rpsurv_rp_negloglik_grad_cpp(SEXP betaSEXP, SEXP XSEXP, SEXP dXSEXP, SEXP XentrySEXP, SEXP hasEntrySEXP, SEXP logtimeSEXP, SEXP statusSEXP, SEXP scaleSEXP, SEXP weightsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -37,14 +37,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type logtime(logtimeSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type status(statusSEXP);
     Rcpp::traits::input_parameter< int >::type scale(scaleSEXP);
-    rcpp_result_gen = Rcpp::wrap(rp_negloglik_grad_cpp(beta, X, dX, Xentry, hasEntry, logtime, status, scale));
+    Rcpp::traits::input_parameter< NumericVector >::type weights(weightsSEXP);
+    rcpp_result_gen = Rcpp::wrap(rp_negloglik_grad_cpp(beta, X, dX, Xentry, hasEntry, logtime, status, scale, weights));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rpsurv_rcs_basis_cpp", (DL_FUNC) &_rpsurv_rcs_basis_cpp, 3},
-    {"_rpsurv_rp_negloglik_grad_cpp", (DL_FUNC) &_rpsurv_rp_negloglik_grad_cpp, 8},
+    {"_rpsurv_rp_negloglik_grad_cpp", (DL_FUNC) &_rpsurv_rp_negloglik_grad_cpp, 9},
     {NULL, NULL, 0}
 };
 

@@ -67,19 +67,21 @@ plot.rpsurv <- function(x, newdata = NULL,
   if (!is.null(by)) stop("`by` applies to type = \"km\" only.", call. = FALSE)
   if (is.null(newdata)) newdata <- rp_default_profile(x)
   newdata <- as.data.frame(newdata)
-  n_curves <- max(1L, nrow(newdata))
-  col <- rep_len(if (is.null(col)) seq_len(n_curves) else col, n_curves)
+  col <- rep_len(if (is.null(col)) seq_len(max(1L, nrow(newdata))) else col, max(1L, nrow(newdata)))
 
   pred <- predict(x, newdata = newdata, times = times, type = type, se.fit = ci)
-  has_band <- ci && !is.null(pred$lower)
-
   ylab <- switch(type, survival = "Survival probability", hazard = "Hazard", cumhaz = "Cumulative hazard")
-  yr <- if (type == "survival") {
-    c(0, 1)
-  } else {
-    range(c(0, pred$est, if (has_band) c(pred$lower, pred$upper)), finite = TRUE)
-  }
-  rp_empty_plot(range(pred$time), yr, "Time", ylab, list(...))
+  rp_draw_curves(pred, newdata, ylab, type == "survival", col, legend, list(...))
+}
+
+# Curves (and 95% bands when `pred` has them) of a long prediction data frame, one per row of `newdata`;
+# `prob` fixes the y range to [0, 1]. Returns `pred` invisibly.
+#' @keywords internal
+rp_draw_curves <- function(pred, newdata, ylab, prob, col, legend, dots) {
+  n_curves <- max(1L, nrow(newdata))
+  has_band <- !is.null(pred$lower)
+  yr <- if (prob) c(0, 1) else range(c(0, pred$est, if (has_band) c(pred$lower, pred$upper)), finite = TRUE)
+  rp_empty_plot(range(pred$time), yr, "Time", ylab, dots)
   for (i in seq_len(n_curves)) {
     d <- pred[pred$id == i, ]
     if (has_band) {

@@ -59,6 +59,7 @@ struct RPLogLikGrad : public Worker {
   const RVector<double> hasEntry;
   const RVector<double> status;
   const RVector<double> logtime;
+  const RVector<double> weights;
   const RVector<double> beta;
   const int scale;
 
@@ -67,13 +68,14 @@ struct RPLogLikGrad : public Worker {
 
   RPLogLikGrad(const NumericMatrix X_, const NumericMatrix dX_, const NumericMatrix Xentry_,
                const NumericVector hasEntry_, const NumericVector status_,
-               const NumericVector logtime_, const NumericVector beta_, int scale_)
+               const NumericVector logtime_, const NumericVector weights_, const NumericVector beta_,
+               int scale_)
     : X(X_), dX(dX_), Xentry(Xentry_), hasEntry(hasEntry_), status(status_), logtime(logtime_),
-      beta(beta_), scale(scale_), loglik(0.0), grad(beta_.size(), 0.0) {}
+      weights(weights_), beta(beta_), scale(scale_), loglik(0.0), grad(beta_.size(), 0.0) {}
 
   RPLogLikGrad(const RPLogLikGrad& other, Split)
     : X(other.X), dX(other.dX), Xentry(other.Xentry), hasEntry(other.hasEntry),
-      status(other.status), logtime(other.logtime), beta(other.beta), scale(other.scale),
+      status(other.status), logtime(other.logtime), weights(other.weights), beta(other.beta), scale(other.scale),
       loglik(0.0), grad(other.beta.size(), 0.0) {}
 
   void operator()(std::size_t begin, std::size_t end) {
@@ -99,6 +101,7 @@ struct RPLogLikGrad : public Worker {
       bool non_monotone_interval = entry && (ts.logS - te.logS > 1e-8);
 
       double d = status[i];
+      double wi = weights[i];
       double li;
       if (non_monotone_interval) {
         li = -1e10;
@@ -112,7 +115,7 @@ struct RPLogLikGrad : public Worker {
           for (std::size_t k = 0; k < p; k++) {
             double dli = d * (dX(i, k) / deta + ts.gprime * X(i, k)) + ts.dlogS_deta * X(i, k);
             if (entry) dli -= te.dlogS_deta * Xentry(i, k);
-            grad[k] += dli;
+            grad[k] += wi * dli;
           }
         }
       } else {
@@ -121,10 +124,10 @@ struct RPLogLikGrad : public Worker {
         for (std::size_t k = 0; k < p; k++) {
           double dli = ts.dlogS_deta * X(i, k);
           if (entry) dli -= te.dlogS_deta * Xentry(i, k);
-          grad[k] += dli;
+          grad[k] += wi * dli;
         }
       }
-      loglik += li;
+      loglik += wi * li;
     }
   }
 
@@ -150,13 +153,15 @@ struct RPLogLikGrad : public Worker {
 //' @param logtime log of the exit (stop) time.
 //' @param status event indicator (1 = event, 0 = censored) at the exit time.
 //' @param scale integer scale code: 0 = PH, 1 = PO, 2 = probit.
+//' @param weights case weights, multiplying each row's log-likelihood term.
 //' @return a list with `value` (negative log-likelihood) and `gradient`.
 //' @keywords internal
 // [[Rcpp::export]]
 List rp_negloglik_grad_cpp(NumericVector beta, NumericMatrix X, NumericMatrix dX,
                             NumericMatrix Xentry, NumericVector hasEntry,
-                            NumericVector logtime, NumericVector status, int scale) {
-  RPLogLikGrad worker(X, dX, Xentry, hasEntry, status, logtime, beta, scale);
+                            NumericVector logtime, NumericVector status, int scale,
+                            NumericVector weights) {
+  RPLogLikGrad worker(X, dX, Xentry, hasEntry, status, logtime, weights, beta, scale);
   parallelReduce(0, X.nrow(), worker);
 
   NumericVector grad(worker.grad.size());
