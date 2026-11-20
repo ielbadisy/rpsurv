@@ -26,9 +26,16 @@
 #'   by the `newdata` columns that differ between rows. By default a legend
 #'   is drawn when there are several curves, in the plot corner that the
 #'   curves cross least. For `type = "km"` the legend is drawn by default.
+#'   For predicted curves, a character vector with one label per row of
+#'   `newdata` (that is not a single position keyword) is taken as the
+#'   labels, shorthand for `labels =`.
 #' @param by for `type = "km"` only: optional grouping, the name of a
 #'   variable of the model formula or a vector with one value per
 #'   observation used in the fit (see [kmcompareplot()]).
+#' @param labels optional character vector, one legend label per row of
+#'   `newdata` (predicted curves only), replacing the default labels built
+#'   from the `newdata` columns, e.g. `labels = c("Remission", "Relapse")`.
+#'   Giving `labels` draws the legend unless `legend = FALSE`.
 #' @param ... further arguments passed to [graphics::plot()], such as
 #'   `ylim` or `main` (and `n_grid` for `type = "km"`).
 #' @return Called for its side effect of drawing the plot. For the
@@ -47,10 +54,11 @@
 #' @export
 plot.rpsurv <- function(x, newdata = NULL,
                         type = c("survival", "hazard", "cumhaz", "coxsnell", "km"),
-                        times = NULL, ci = TRUE, col = NULL, legend = NULL, by = NULL, ...) {
+                        times = NULL, ci = TRUE, col = NULL, legend = NULL, by = NULL,
+                        labels = NULL, ...) {
   type <- match.arg(type)
   if (type %in% c("coxsnell", "km")) {
-    unused <- c(newdata = !is.null(newdata), times = !is.null(times), ci = !missing(ci))
+    unused <- c(newdata = !is.null(newdata), times = !is.null(times), ci = !missing(ci), labels = !is.null(labels))
     if (type == "coxsnell") unused <- c(unused, col = !is.null(col), legend = !is.null(legend))
     if (any(unused)) {
       stop("`", paste(names(unused)[unused], collapse = "`, `"), "` ",
@@ -71,14 +79,15 @@ plot.rpsurv <- function(x, newdata = NULL,
 
   pred <- predict(x, newdata = newdata, times = times, type = type, se.fit = ci)
   ylab <- switch(type, survival = "Survival probability", hazard = "Hazard", cumhaz = "Cumulative hazard")
-  rp_draw_curves(pred, newdata, ylab, type == "survival", col, legend, list(...))
+  rp_draw_curves(pred, newdata, ylab, type == "survival", col, legend, list(...), labels)
 }
 
 # Curves (and 95% bands when `pred` has them) of a long prediction data frame, one per row of `newdata`;
 # `prob` fixes the y range to [0, 1]. Returns `pred` invisibly.
 #' @keywords internal
-rp_draw_curves <- function(pred, newdata, ylab, prob, col, legend, dots) {
+rp_draw_curves <- function(pred, newdata, ylab, prob, col, legend, dots, labels = NULL) {
   n_curves <- max(1L, nrow(newdata))
+  lg <- rp_legend_spec(legend, labels, newdata); legend <- lg$legend; labels <- lg$labels
   has_band <- !is.null(pred$lower)
   yr <- if (prob) c(0, 1) else range(c(0, pred$est, if (has_band) c(pred$lower, pred$upper)), finite = TRUE)
   rp_empty_plot(range(pred$time), yr, "Time", ylab, dots)
@@ -92,16 +101,31 @@ rp_draw_curves <- function(pred, newdata, ylab, prob, col, legend, dots) {
     graphics::lines(d$time, d$est, col = col[i], lwd = 2)
   }
 
-  if (is.null(legend)) legend <- n_curves > 1L
   if (isTRUE(legend)) {
     legend <- rp_legend_pos(rep(pred$time, if (has_band) 3L else 1L),
                             c(pred$est, if (has_band) c(pred$lower, pred$upper)), n_curves)
   }
   if (!isFALSE(legend)) {
-    graphics::legend(legend, legend = rp_profile_labels(newdata), col = col, lwd = 2,
+    graphics::legend(legend, legend = labels, col = col, lwd = 2,
                      bty = "n", inset = 0.02)
   }
   invisible(pred)
+}
+
+# Legend position (TRUE = automatic, FALSE = none) and labels. A character `legend` that is not a single
+# position keyword is the labels; custom labels switch the legend on.
+#' @keywords internal
+rp_legend_spec <- function(legend, labels, newdata) {
+  n <- max(1L, nrow(newdata))
+  pos <- c("bottomright", "bottom", "bottomleft", "left", "topleft", "top", "topright", "right", "center")
+  if (is.character(legend) && !(length(legend) == 1L && legend %in% pos)) {
+    labels <- legend; legend <- TRUE
+  }
+  if (!is.null(labels) && length(labels) != n) {
+    stop("`labels` must have one entry per row of `newdata` (", n, ").", call. = FALSE)
+  }
+  if (is.null(legend)) legend <- n > 1L || !is.null(labels)
+  list(legend = legend, labels = if (is.null(labels)) rp_profile_labels(newdata) else as.character(labels))
 }
 
 # One covariate profile: numeric variables at their mean, factor, character

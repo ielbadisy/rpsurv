@@ -1,3 +1,7 @@
+# rpsurv 0.8.6
+
+* `plot.rpsurv()` and `plot.rpcr()` gain `labels =`, one legend label per row of `newdata` (for example `labels = c("Remission", "Relapse")`), replacing the labels built from the `newdata` columns. `legend =` also accepts such a vector of labels; a single position keyword, `TRUE` and `FALSE` work as before. Custom labels switch the legend on, also for a single curve.
+
 # rpsurv 0.8.5
 
 * New `rpcr()`: a flexible parametric Fine-Gray model for competing risks, a Royston-Parmar model for the subdistribution hazard of one cause fitted by inverse-probability-of-censoring weighted likelihood (Lambert, Wilkes and Crowther, 2017). It gives subdistribution hazard ratios with a subject-clustered robust variance, and a smooth cumulative incidence function. The subdistribution hazard ratios and their standard errors agree with `cmprsk::crr()`, and the cumulative incidence with the Aalen-Johansen estimate. `tve`, `nle` and the odds and probit scales work as in `rpsurv()`.

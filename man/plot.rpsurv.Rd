@@ -13,6 +13,7 @@
   col = NULL,
   legend = NULL,
   by = NULL,
+  labels = NULL,
   ...
 )
 }
@@ -43,11 +44,19 @@ over which the model is estimated.}
 \code{\link[graphics:legend]{graphics::legend()}} for the legend identifying the curves, labelled
 by the \code{newdata} columns that differ between rows. By default a legend
 is drawn when there are several curves, in the plot corner that the
-curves cross least. For \code{type = "km"} the legend is drawn by default.}
+curves cross least. For \code{type = "km"} the legend is drawn by default.
+For predicted curves, a character vector with one label per row of
+\code{newdata} (that is not a single position keyword) is taken as the
+labels, shorthand for \verb{labels =}.}
 
 \item{by}{for \code{type = "km"} only: optional grouping, the name of a
 variable of the model formula or a vector with one value per
 observation used in the fit (see \code{\link[=kmcompareplot]{kmcompareplot()}}).}
+
+\item{labels}{optional character vector, one legend label per row of
+\code{newdata} (predicted curves only), replacing the default labels built
+from the \code{newdata} columns, e.g. \code{labels = c("Remission", "Relapse")}.
+Giving \code{labels} draws the legend unless \code{legend = FALSE}.}
 
 \item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}, such as
 \code{ylim} or \code{main} (and \code{n_grid} for \code{type = "km"}).}

@@ -156,11 +156,13 @@ predict.rpcr <- function(object, newdata = NULL, newdata0 = NULL, times = NULL,
 #' @param type `"cif"` (cumulative incidence) or `"shr"` (subdistribution hazard ratio of each row of
 #'   `newdata` vs `newdata0`, useful under `tve`).
 #' @param newdata0 reference profile(s) for `type = "shr"`.
-#' @param times,ci,col,legend,... as in [plot.rpsurv()].
+#' @param times,ci,col,legend,labels,... as in [plot.rpsurv()]: `legend` is `TRUE`, `FALSE` or a
+#'   position, and custom curve labels go in `labels = c("Remission", "Relapse")` (or `legend =` a
+#'   vector of labels).
 #' @return invisibly, the plotted predictions (see [predict.rpcr()]).
 #' @export
 plot.rpcr <- function(x, newdata = NULL, type = c("cif", "shr"), newdata0 = NULL, times = NULL,
-                      ci = TRUE, col = NULL, legend = NULL, ...) {
+                      ci = TRUE, col = NULL, legend = NULL, labels = NULL, ...) {
   type <- match.arg(type)
   newdata <- as.data.frame(if (is.null(newdata)) rp_default_profile(x) else newdata)
   n <- max(1L, nrow(newdata))
@@ -168,5 +170,5 @@ plot.rpcr <- function(x, newdata = NULL, type = c("cif", "shr"), newdata0 = NULL
   pred <- predict(x, newdata, newdata0, times, type = type, se.fit = ci)
   ylab <- if (type == "cif") paste0("Cumulative incidence (cause ", x$cause, ")") else
     "Subdistribution hazard ratio"
-  rp_draw_curves(pred, newdata, ylab, type == "cif", col, legend, list(...))
+  rp_draw_curves(pred, newdata, ylab, type == "cif", col, legend, list(...), labels)
 }
