@@ -32,9 +32,10 @@ rcs_basis_cpp <- function(x, knots, derivative) {
 #' @param logtime log of the exit (stop) time.
 #' @param status event indicator (1 = event, 0 = censored) at the exit time.
 #' @param scale integer scale code: 0 = PH, 1 = PO, 2 = probit.
+#' @param weights case weights, multiplying each row's log-likelihood term.
 #' @return a list with `value` (negative log-likelihood) and `gradient`.
 #' @keywords internal
-rp_negloglik_grad_cpp <- function(beta, X, dX, Xentry, hasEntry, logtime, status, scale) {
-    .Call(`_rpsurv_rp_negloglik_grad_cpp`, beta, X, dX, Xentry, hasEntry, logtime, status, scale)
+rp_negloglik_grad_cpp <- function(beta, X, dX, Xentry, hasEntry, logtime, status, scale, weights) {
+    .Call(`_rpsurv_rp_negloglik_grad_cpp`, beta, X, dX, Xentry, hasEntry, logtime, status, scale, weights)
 }
 

@@ -4,7 +4,17 @@
 \alias{rp_negloglik_grad_cpp}
 \title{Negative log-likelihood and gradient for a Royston-Parmar model}
 \usage{
-rp_negloglik_grad_cpp(beta, X, dX, Xentry, hasEntry, logtime, status, scale)
+rp_negloglik_grad_cpp(
+  beta,
+  X,
+  dX,
+  Xentry,
+  hasEntry,
+  logtime,
+  status,
+  scale,
+  weights
+)
 }
 \arguments{
 \item{beta}{parameter vector.}
@@ -22,6 +32,8 @@ rp_negloglik_grad_cpp(beta, X, dX, Xentry, hasEntry, logtime, status, scale)
 \item{status}{event indicator (1 = event, 0 = censored) at the exit time.}
 
 \item{scale}{integer scale code: 0 = PH, 1 = PO, 2 = probit.}
+
+\item{weights}{case weights, multiplying each row's log-likelihood term.}
 }
 \value{
 a list with \code{value} (negative log-likelihood) and \code{gradient}.

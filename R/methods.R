@@ -13,13 +13,30 @@ logLik.rpsurv <- function(object, ...) {
   val
 }
 
+# One value per model, or a data frame with df and the criterion (one row per model, named as in the
+# call) when several are given, as stats::AIC() and stats::BIC(). Other model classes use their own method.
+rp_ic <- function(ms, nms, pen, ic, f) {
+  v <- vapply(ms, function(m) if (inherits(m, "rpsurv")) -2 * m$loglik + pen(m) * m$df else f(m), 0)
+  if (length(ms) == 1L) return(v)
+  df <- vapply(ms, function(m) if (inherits(m, "rpsurv")) m$df else attr(stats::logLik(m), "df"), 0)
+  stats::setNames(data.frame(df, v, row.names = nms), c("df", ic))
+}
+
 #' @importFrom stats AIC
 #' @export
-AIC.rpsurv <- function(object, ..., k = 2) -2 * object$loglik + k * object$df
+AIC.rpsurv <- function(object, ..., k = 2) {
+  nms <- vapply(as.list(match.call(expand.dots = TRUE)[-1L]), deparse1, "")
+  rp_ic(list(object, ...), nms[names(nms) != "k"], function(m) k, "AIC", function(m) stats::AIC(m, k = k))
+}
 
+# The BIC penalty uses the number of events, the effective sample size of censored data (Volinsky and
+# Raftery 2000).
 #' @importFrom stats BIC
 #' @export
-BIC.rpsurv <- function(object, ...) -2 * object$loglik + log(object$nevent) * object$df
+BIC.rpsurv <- function(object, ...) {
+  nms <- vapply(as.list(match.call(expand.dots = TRUE)[-1L]), deparse1, "")
+  rp_ic(list(object, ...), nms, function(m) log(m$nevent), "BIC", stats::BIC)
+}
 
 # Standard errors from the vcov diagonal. A negative or non-finite variance
 # (non-positive-definite vcov, already reported by rpsurv()) gives NA plus
@@ -59,13 +76,18 @@ rp_na_note <- function(na_action) {
 # and LR tests done by hand; format() keeps the session's digits and scipen.
 rp_fmt_fit <- function(v) format(round(v, 2), nsmall = 2)
 
+rp_title <- function(x) {
+  if (is.null(x$cause)) return("Royston-Parmar flexible parametric survival model")
+  paste0("Royston-Parmar flexible parametric Fine-Gray model (cause ", x$cause, ", robust SE)")
+}
+
 is_baseline_term <- function(object) {
   seq_along(object$coefficients) <= object$p_base
 }
 
 #' @export
 print.rpsurv <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
-  cat("Royston-Parmar flexible parametric survival model\n")
+  cat(rp_title(x), "\n", sep = "")
   cat("Call:\n")
   print(x$call)
   cat("\nScale: ", x$scale, "   Baseline df: ", x$p_base - 1L,
@@ -102,7 +124,8 @@ summary.rpsurv <- function(object, ...) {
       tve = object$tve,
       nle = object$nle,
       counting = object$counting,
-      na.action = object$na.action
+      na.action = object$na.action,
+      cause = object$cause
     ),
     class = "summary.rpsurv"
   )
@@ -111,11 +134,11 @@ summary.rpsurv <- function(object, ...) {
 #' @export
 print.summary.rpsurv <- function(x, digits = max(3L, getOption("digits") - 3L),
                                   signif.stars = getOption("show.signif.stars"), ...) {
-  cat("Royston-Parmar flexible parametric survival model\n")
+  cat(rp_title(x), "\n", sep = "")
   cat("Call:\n")
   print(x$call)
 
-  hr_label <- switch(x$scale, hazard = "exp(coef) [HR]", odds = "exp(coef) [OR]", "exp(coef)")
+  hr_label <- switch(x$scale, hazard = if (is.null(x$cause)) "exp(coef) [HR]" else "exp(coef) [sHR]", odds = "exp(coef) [OR]", "exp(coef)")
 
   cov_tab <- x$coefficients[!x$baseline, , drop = FALSE]
   if (nrow(cov_tab)) {
