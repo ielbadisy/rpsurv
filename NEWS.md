@@ -1,3 +1,9 @@
+# rpsurv 0.8.8
+
+* `plot(<rpcr>)` gains `scale =` (default 1, unchanged output): a multiplier of the `"cif"` and
+  `"cifdiff"` curves and bands, e.g. `scale = 100` for events per 100 (percentage points); the y label
+  then ends in "per 100" and the returned predictions are on the plotted scale.
+
 # rpsurv 0.8.7
 
 * `plot(<rpcr>, type = "cifdiff")` draws the difference in cumulative incidence `F(t | newdata) - F(t | newdata0)` over time with its 95% delta-method band and a dashed line at 0 (`ref.line =`). The delta-method standard error agrees with a simulation from the asymptotic law of the coefficients, and the difference with the true value and the Aalen-Johansen estimate under a simulated Fine-Gray model.

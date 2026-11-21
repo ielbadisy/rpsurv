@@ -164,7 +164,9 @@ predict.rpcr <- function(object, newdata = NULL, newdata0 = NULL, times = NULL,
 #'   vector of labels). Colours default to black, blue, vermillion, then Okabe-Ito. `...` goes to
 #'   [graphics::plot()] (`xlab`, `ylab`, `ylim`, `main`; no title by default).
 #' @param ref.line logical; for `"cifdiff"` and `"shr"`, a dashed grey line at no effect (0 or 1).
-#' @return invisibly, the plotted predictions (see [predict.rpcr()]).
+#' @param scale multiplier of the `"cif"` and `"cifdiff"` curves and bands, e.g. `100` for events per 100
+#'   (percentage points); the y label then says "per 100". Default 1 (probability scale).
+#' @return invisibly, the plotted predictions (see [predict.rpcr()]), on the plotted scale.
 #' @examples
 #' \donttest{
 #' d <- survival::mgus2
@@ -176,7 +178,7 @@ predict.rpcr <- function(object, newdata = NULL, newdata0 = NULL, times = NULL,
 #' }
 #' @export
 plot.rpcr <- function(x, newdata = NULL, type = c("cif", "shr", "cifdiff"), newdata0 = NULL, times = NULL,
-                      ci = TRUE, col = NULL, legend = NULL, labels = NULL, ref.line = TRUE, ...) {
+                      ci = TRUE, col = NULL, legend = NULL, labels = NULL, ref.line = TRUE, scale = 1, ...) {
   type <- match.arg(type)
   newdata <- as.data.frame(if (is.null(newdata)) rp_default_profile(x) else newdata)
   n <- max(1L, nrow(newdata))
@@ -185,7 +187,14 @@ plot.rpcr <- function(x, newdata = NULL, type = c("cif", "shr", "cifdiff"), newd
   ylab <- switch(type, cif = paste0("Cumulative incidence (cause ", x$cause, ")"),
                  cifdiff = paste0("CIF difference (cause ", x$cause, ")"),
                  shr = "Subdistribution hazard ratio")
-  out <- rp_draw_curves(pred, newdata, ylab, type == "cif", col, legend, list(...), labels)
+  dots <- list(...)
+  if (type != "shr" && scale != 1) {
+    v <- intersect(c("est", "se", "lower", "upper"), names(pred))
+    pred[v] <- lapply(pred[v], `*`, scale)
+    ylab <- paste(ylab, "per", format(scale))
+    if (type == "cif" && is.null(dots$ylim)) dots$ylim <- c(0, scale)
+  }
+  out <- rp_draw_curves(pred, newdata, ylab, type == "cif" && scale == 1, col, legend, dots, labels)
   if (ref.line && type != "cif") graphics::abline(h = as.numeric(type == "shr"), lty = 2, col = "grey50")
   invisible(out)
 }

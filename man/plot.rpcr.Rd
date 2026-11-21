@@ -15,6 +15,7 @@
   legend = NULL,
   labels = NULL,
   ref.line = TRUE,
+  scale = 1,
   ...
 )
 }
@@ -38,9 +39,12 @@ vector of labels). Colours default to black, blue, vermillion, then Okabe-Ito. \
 \code{\link[graphics:plot.default]{graphics::plot()}} (\code{xlab}, \code{ylab}, \code{ylim}, \code{main}; no title by default).}
 
 \item{ref.line}{logical; for \code{"cifdiff"} and \code{"shr"}, a dashed grey line at no effect (0 or 1).}
+
+\item{scale}{multiplier of the \code{"cif"} and \code{"cifdiff"} curves and bands, e.g. \code{100} for events per 100
+(percentage points); the y label then says "per 100". Default 1 (probability scale).}
 }
 \value{
-invisibly, the plotted predictions (see \code{\link[=predict.rpcr]{predict.rpcr()}}).
+invisibly, the plotted predictions (see \code{\link[=predict.rpcr]{predict.rpcr()}}), on the plotted scale.
 }
 \description{
 Plot cumulative incidence curves from a flexible parametric Fine-Gray model
