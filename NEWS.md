@@ -1,3 +1,10 @@
+# rpsurv 0.8.7
+
+* `plot(<rpcr>, type = "cifdiff")` draws the difference in cumulative incidence `F(t | newdata) - F(t | newdata0)` over time with its 95% delta-method band and a dashed line at 0 (`ref.line =`). The delta-method standard error agrees with a simulation from the asymptotic law of the coefficients, and the difference with the true value and the Aalen-Johansen estimate under a simulated Fine-Gray model.
+* `kmcompareplot()` gains `minn =` (groups of `by` with fewer subjects are not drawn, for example `minn = 10` drops a one-patient level), `levels =` (which groups to draw, in order), `labels =` (the two curve labels) and `grouplabels =` (the group labels). `plot(type = "km")` passes them on.
+* Plot look (bug fix, numbers unchanged): default colours of `plot.rpsurv()`, `plot.rpcr()` and `kmcompareplot()` are now black, blue (#0072B2), vermillion (#D55E00), then the other Okabe-Ito colours, instead of the base palette and `hcl.colors("Dark 3")`. A single-group `kmcompareplot()` draws the model curve in blue, not red, and its legend reads "Kaplan-Meier" and "Model" instead of "rpsurv". The default y label of `coxsnellplot()` is shortened to "Cumulative hazard of residuals" so that it is not clipped in short figures.
+* `coxsnellplot()` gains `col =` (residual curve) and `ref.col =` (reference line, `NA` drops it); the reference line is now grey, not red. `plot(type = "coxsnell")` accepts `col`.
+
 # rpsurv 0.8.6
 
 * `plot.rpsurv()` and `plot.rpcr()` gain `labels =`, one legend label per row of `newdata` (for example `labels = c("Remission", "Relapse")`), replacing the labels built from the `newdata` columns. `legend =` also accepts such a vector of labels; a single position keyword, `TRUE` and `FALSE` work as before. Custom labels switch the legend on, also for a single curve.

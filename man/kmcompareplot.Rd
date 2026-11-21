@@ -4,7 +4,18 @@
 \alias{kmcompareplot}
 \title{Compare the fitted survival curve against the Kaplan-Meier estimate}
 \usage{
-kmcompareplot(object, by = NULL, col = NULL, n_grid = 200, legend = TRUE, ...)
+kmcompareplot(
+  object,
+  by = NULL,
+  col = NULL,
+  n_grid = 200,
+  legend = TRUE,
+  minn = 1,
+  levels = NULL,
+  labels = c("Kaplan-Meier", "Model"),
+  grouplabels = NULL,
+  ...
+)
 }
 \arguments{
 \item{object}{a fitted \code{"rpsurv"} object.}
@@ -16,8 +27,9 @@ formula, or a vector with one value per observation used in the fit
 curve, averaged over the subjects of that group.}
 
 \item{col}{colours. Without \code{by}, two colours for the Kaplan-Meier and the
-model curve (default black and red); with \code{by}, one colour per group
-(both curves of a group share it and differ by line type).}
+model curve (default black and blue); with \code{by}, one colour per group
+(both curves of a group share it and differ by line type), by default
+black, blue, vermillion, then the other Okabe-Ito colours.}
 
 \item{n_grid}{number of time points at which the model curve is
 evaluated, from 0 to the last follow-up time.}
@@ -26,7 +38,19 @@ evaluated, from 0 to the last follow-up time.}
 curves cross least), \code{FALSE} for none, or a position keyword accepted
 by \code{\link[graphics:legend]{graphics::legend()}}.}
 
-\item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
+\item{minn}{groups of \code{by} with fewer than \code{minn} subjects are not drawn
+(for example \code{minn = 10} drops a one-patient level).}
+
+\item{levels}{optional subset of the groups of \code{by} to draw, in the order
+given (legend order too).}
+
+\item{labels}{two legend labels, for the Kaplan-Meier and the model curve.}
+
+\item{grouplabels}{optional legend labels for the groups drawn, one per
+group, replacing \code{"by = level"}.}
+
+\item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}, such as \code{xlab},
+\code{ylab} or \code{main}.}
 }
 \value{
 Called for its side effect of drawing the comparison plot.

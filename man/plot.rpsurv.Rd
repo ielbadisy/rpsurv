@@ -38,7 +38,9 @@ over which the model is estimated.}
 
 \item{ci}{logical; add a 95\% delta-method confidence band (pointwise).}
 
-\item{col}{colour(s), recycled over rows of \code{newdata}.}
+\item{col}{colour(s), recycled over rows of \code{newdata}. By default black,
+blue, vermillion, then the other Okabe-Ito colours (colour-blind safe).
+For \code{type = "coxsnell"}, the colour of the residual curve.}
 
 \item{legend}{\code{TRUE}, \code{FALSE}, or a position keyword accepted by
 \code{\link[graphics:legend]{graphics::legend()}} for the legend identifying the curves, labelled
@@ -56,10 +58,13 @@ observation used in the fit (see \code{\link[=kmcompareplot]{kmcompareplot()}}).
 \item{labels}{optional character vector, one legend label per row of
 \code{newdata} (predicted curves only), replacing the default labels built
 from the \code{newdata} columns, e.g. \code{labels = c("Remission", "Relapse")}.
-Giving \code{labels} draws the legend unless \code{legend = FALSE}.}
+Giving \code{labels} draws the legend unless \code{legend = FALSE}. For
+\code{type = "km"}, the two curve labels of \code{\link[=kmcompareplot]{kmcompareplot()}}.}
 
 \item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}, such as
-\code{ylim} or \code{main} (and \code{n_grid} for \code{type = "km"}).}
+\code{ylim} or \code{main} (and \code{n_grid}, \code{minn}, \code{levels}, \code{grouplabels} for
+\code{type = "km"}, \code{ref.col} for \code{type = "coxsnell"}). No title is drawn
+unless \code{main} is given.}
 }
 \value{
 Called for its side effect of drawing the plot. For the
