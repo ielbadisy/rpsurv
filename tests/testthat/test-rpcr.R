@@ -150,3 +150,19 @@ test_that("CIF difference agrees with the true difference and Aalen-Johansen und
   ajse <- sqrt(aj$std.err[a1, 2]^2 + aj$std.err[a0, 2]^2)
   expect_true(all(se < 1.05 * ajse & se > 0.5 * ajse))
 })
+
+test_that("plot(type = 'cifdiff', scale = 100) draws per 100; default scale keeps the probability scale", {
+  d <- mgus()
+  fit <- rpcr(survival::Surv(etime, event) ~ sex, data = d, cause = "pcm")
+  n1 <- data.frame(sex = "M"); n0 <- data.frame(sex = "F"); tt <- c(60, 120, 240)
+  pdf(NULL); dev.control("enable"); on.exit(dev.off())
+  dd <- predict(fit, n1, n0, times = tt, type = "cifdiff", se.fit = TRUE)
+  expect_equal(plot(fit, type = "cifdiff", newdata = n1, newdata0 = n0, times = tt, scale = 1), dd)
+  p <- plot(fit, type = "cifdiff", newdata = n0, newdata0 = n1, times = tt, scale = 100)
+  d0 <- predict(fit, n0, n1, times = tt, type = "cifdiff", se.fit = TRUE)
+  expect_equal(p[c("est", "lower", "upper")], 100 * d0[c("est", "lower", "upper")])
+  expect_true("CIF difference (cause pcm) per 100" %in%
+                unlist(lapply(recordPlot()[[1]], function(e) Filter(is.character, e[[2]]))))
+  pc <- plot(fit, type = "cif", newdata = n1, times = tt, scale = 100)
+  expect_equal(pc$est, 100 * predict(fit, n1, times = tt, type = "cif")$est)
+})
