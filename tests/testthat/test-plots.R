@@ -248,7 +248,8 @@ test_that("kmcompareplot: minn, levels, labels and grouplabels", {
   expect_setequal(unique(kmcompareplot(fit, by = "ph.ecog")$group), as.character(0:3))
   k <- kmcompareplot(fit, by = "ph.ecog", minn = 10)
   expect_setequal(unique(k$group), as.character(0:2))
-  expect_equal(k[k$group == "0", ], kmcompareplot(fit, by = "ph.ecog")[k$group == "0", ][seq_len(sum(k$group == "0")), ])
+  k0 <- kmcompareplot(fit, by = "ph.ecog")
+  expect_equal(k[k$group == "0", ], k0[k0$group == "0", ], ignore_attr = TRUE)
   k <- kmcompareplot(fit, by = "ph.ecog", levels = c(2, 0), labels = c("KM", "Flexible parametric"),
                      grouplabels = c("ECOG 2", "ECOG 0"))
   expect_equal(unique(k$group), c("2", "0"))
