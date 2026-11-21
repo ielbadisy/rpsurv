@@ -107,3 +107,46 @@ test_that("AIC and BIC of several models give one row per model, as stats::AIC",
   expect_equal(b$BIC, c(BIC(f1), BIC(f2)))
   expect_equal(BIC(f1), -2 * f1$loglik + log(f1$nevent) * f1$df)
 })
+
+test_that("plot(type = 'cifdiff') draws the CIF difference; delta-method band matches simulation", {
+  d <- mgus()
+  fit <- rpcr(survival::Surv(etime, event) ~ sex, data = d, cause = "pcm")
+  n1 <- data.frame(sex = "M"); n0 <- data.frame(sex = "F"); tt <- c(60, 120, 240)
+  pdf(NULL); dev.control("enable"); on.exit(dev.off())
+  p <- plot(fit, type = "cifdiff", newdata = n1, newdata0 = n0, times = tt)
+  dd <- predict(fit, n1, n0, times = tt, type = "cifdiff", se.fit = TRUE)
+  expect_equal(p, dd)
+  expect_true(all(c("CIF difference (cause pcm)", "grey50") %in%
+                    unlist(lapply(recordPlot()[[1]], function(e) Filter(is.character, e[[2]])))))
+  expect_error(plot(fit, type = "cifdiff", newdata = n1), "newdata0")
+  se <- (dd$upper - dd$lower) / (2 * qnorm(0.975))
+  # delta method vs simulation from the asymptotic normal law of the coefficients
+  set.seed(1)
+  B <- sweep(matrix(rnorm(2000 * length(coef(fit))), 2000) %*% chol(vcov(fit)), 2, coef(fit), "+")
+  sim <- apply(B, 1, function(b) {
+    f <- fit; f$coefficients <- b
+    predict(f, n1, n0, times = tt, type = "cifdiff")$est
+  })
+  expect_equal(se, apply(sim, 1, sd), tolerance = 0.06)
+})
+
+test_that("CIF difference agrees with the true difference and Aalen-Johansen under a Fine-Gray model", {
+  # Fine (1999) generator: F1(t | x) = 1 - {1 - p (1 - exp(-t))}^exp(b x), known exactly
+  F1 <- function(t, x, p = 0.4, b = 0.5) 1 - (1 - p * (1 - exp(-t)))^exp(b * x)
+  set.seed(2); n <- 1500; p <- 0.4; b <- 0.5
+  x <- rbinom(n, 1, 0.5); E <- exp(b * x); c1 <- runif(n) < 1 - (1 - p)^E
+  t1 <- -log(1 - (1 - (1 - runif(n) * (1 - (1 - p)^E))^(1 / E)) / p)
+  tt <- ifelse(c1, t1, rexp(n, exp(-0.5 * x))); cz <- runif(n, 0, 4)
+  d <- data.frame(x, time = pmin(tt, cz), status = factor(ifelse(cz < tt, 0, ifelse(c1, 1, 2)), 0:2))
+  fit <- rpcr(survival::Surv(time, status) ~ x, data = d, cause = "1")
+  tg <- c(0.5, 1, 2)
+  dd <- predict(fit, data.frame(x = 1), data.frame(x = 0), times = tg, type = "cifdiff", se.fit = TRUE)
+  se <- (dd$upper - dd$lower) / (2 * qnorm(0.975))
+  aj <- summary(survival::survfit(survival::Surv(time, status) ~ x, data = d), times = tg)
+  a1 <- aj$strata == "x=1"; a0 <- aj$strata == "x=0"
+  expect_lt(max(abs(dd$est - (aj$pstate[a1, 2] - aj$pstate[a0, 2]))), 0.01)
+  expect_true(all(abs(dd$est - (F1(tg, 1) - F1(tg, 0))) < 2 * se))
+  # the parametric model is at least as precise as the nonparametric estimate, of the same order
+  ajse <- sqrt(aj$std.err[a1, 2]^2 + aj$std.err[a0, 2]^2)
+  expect_true(all(se < 1.05 * ajse & se > 0.5 * ajse))
+})

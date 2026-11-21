@@ -50,7 +50,9 @@ residuals.rpsurv <- function(object, type = c("coxsnell", "martingale", "devianc
 #' by the Nelson-Aalen estimator.
 #'
 #' @param object a fitted `"rpsurv"` object.
-#' @param ... further arguments passed to [graphics::plot()]. Both axes
+#' @param col colour of the residual curve.
+#' @param ref.col colour of the dashed y = x reference line (`NA` drops it).
+#' @param ... further arguments passed to [graphics::plot()], such as `main`. Both axes
 #'   default to the same range starting at 0, so the reference line is the
 #'   diagonal of the plot.
 #' @return Called for its side effect of drawing the diagnostic plot.
@@ -58,7 +60,7 @@ residuals.rpsurv <- function(object, type = c("coxsnell", "martingale", "devianc
 #'   distinct Cox-Snell residuals) and `cumhaz` (their Nelson-Aalen
 #'   cumulative hazard), the coordinates of the plotted step function.
 #' @export
-coxsnellplot <- function(object, ...) {
+coxsnellplot <- function(object, col = "black", ref.col = "grey50", ...) {
   r <- residuals(object, type = "coxsnell")
   ok <- is.finite(r)
   fit <- survival::survfit(survival::Surv(r[ok], object$status[ok]) ~ 1, ctype = 1)
@@ -66,10 +68,10 @@ coxsnellplot <- function(object, ...) {
   lim <- c(0, max(c(fit$time, H), na.rm = TRUE))
   dots <- list(...)
   def <- list(xlim = lim, ylim = lim)
-  rp_empty_plot(lim, lim, "Cox-Snell residual", "Nelson-Aalen cumulative hazard of residuals",
+  rp_empty_plot(lim, lim, "Cox-Snell residual", "Cumulative hazard of residuals",
                 c(def[setdiff(names(def), names(dots))], dots))
-  graphics::abline(0, 1, col = "red", lty = 2)
-  graphics::lines(c(0, fit$time), c(0, H), type = "s", lwd = 2)
+  if (!is.na(ref.col)) graphics::abline(0, 1, col = ref.col, lty = 2)
+  graphics::lines(c(0, fit$time), c(0, H), type = "s", lwd = 2, col = col)
   invisible(data.frame(time = fit$time, cumhaz = H))
 }
 
@@ -107,14 +109,23 @@ coxsnellplot <- function(object, ...) {
 #'   10 groups. Each group gets its Kaplan-Meier curve and its own model
 #'   curve, averaged over the subjects of that group.
 #' @param col colours. Without `by`, two colours for the Kaplan-Meier and the
-#'   model curve (default black and red); with `by`, one colour per group
-#'   (both curves of a group share it and differ by line type).
+#'   model curve (default black and blue); with `by`, one colour per group
+#'   (both curves of a group share it and differ by line type), by default
+#'   black, blue, vermillion, then the other Okabe-Ito colours.
 #' @param n_grid number of time points at which the model curve is
 #'   evaluated, from 0 to the last follow-up time.
 #' @param legend `TRUE` (default; the legend goes in the plot corner the
 #'   curves cross least), `FALSE` for none, or a position keyword accepted
 #'   by [graphics::legend()].
-#' @param ... further arguments passed to [graphics::plot()].
+#' @param minn groups of `by` with fewer than `minn` subjects are not drawn
+#'   (for example `minn = 10` drops a one-patient level).
+#' @param levels optional subset of the groups of `by` to draw, in the order
+#'   given (legend order too).
+#' @param labels two legend labels, for the Kaplan-Meier and the model curve.
+#' @param grouplabels optional legend labels for the groups drawn, one per
+#'   group, replacing `"by = level"`.
+#' @param ... further arguments passed to [graphics::plot()], such as `xlab`,
+#'   `ylab` or `main`.
 #' @return Called for its side effect of drawing the comparison plot.
 #'   Invisibly returns a `data.frame` with columns `group`, `curve`
 #'   (`"km"` or `"model"`), `time` and `surv`, the plotted coordinates.
@@ -124,8 +135,8 @@ coxsnellplot <- function(object, ...) {
 #' kmcompareplot(fit, by = "celltype")
 #' }
 #' @export
-kmcompareplot <- function(object, by = NULL, col = NULL, n_grid = 200,
-                            legend = TRUE, ...) {
+kmcompareplot <- function(object, by = NULL, col = NULL, n_grid = 200, legend = TRUE, minn = 1,
+                          levels = NULL, labels = c("Kaplan-Meier", "Model"), grouplabels = NULL, ...) {
   n <- length(object$time)
   by_name <- NULL
   if (is.null(by)) {
@@ -159,9 +170,14 @@ kmcompareplot <- function(object, by = NULL, col = NULL, n_grid = 200,
     g <- if (is.factor(v)) droplevels(v) else factor(v)
   }
   groups <- split(seq_len(n), g)
-  groups <- groups[lengths(groups) > 0L]
+  groups <- groups[lengths(groups) >= max(1L, minn)]
+  if (!is.null(levels)) groups <- groups[intersect(as.character(levels), names(groups))]
   k <- length(groups)
-  if (is.null(col)) col <- if (k == 1L) c("black", "red") else grDevices::hcl.colors(k, "Dark 3")
+  if (!k) stop("no group of `by` left to draw (check `minn` and `levels`)", call. = FALSE)
+  if (!is.null(grouplabels) && length(grouplabels) != k) {
+    stop("`grouplabels` must have one entry per group drawn (", k, ")", call. = FALSE)
+  }
+  if (is.null(col)) col <- rp_palette(max(2L, k))
   col_km <- if (k == 1L) col[1L] else rep_len(col, k)
   col_md <- if (k == 1L) col[min(2L, length(col))] else col_km
 
@@ -195,12 +211,13 @@ kmcompareplot <- function(object, by = NULL, col = NULL, n_grid = 200,
   }
   if (!isFALSE(legend)) {
     if (k == 1L) {
-      graphics::legend(legend, legend = c("Kaplan-Meier", "rpsurv (population-averaged)"),
+      graphics::legend(legend, legend = labels,
                        col = c(col_km, col_md), lty = c(1, 2), lwd = c(1.5, 2), bty = "n",
                        inset = 0.02)
     } else {
-      graphics::legend(legend, legend = c(if (is.null(by_name)) names(groups) else paste(by_name, "=", names(groups)),
-                                    "Kaplan-Meier", "rpsurv"),
+      gl <- if (!is.null(grouplabels)) grouplabels else if (is.null(by_name)) names(groups) else
+        paste(by_name, "=", names(groups))
+      graphics::legend(legend, legend = c(gl, labels),
                        col = c(col_km, "black", "black"), lty = c(rep(NA, k), 1, 2),
                        pch = c(rep(15, k), NA, NA), lwd = c(rep(NA, k), 1.5, 2),
                        pt.cex = 1.5, bty = "n", inset = 0.02)

@@ -4,12 +4,16 @@
 \alias{coxsnellplot}
 \title{Cox-Snell residual diagnostic plot}
 \usage{
-coxsnellplot(object, ...)
+coxsnellplot(object, col = "black", ref.col = "grey50", ...)
 }
 \arguments{
 \item{object}{a fitted \code{"rpsurv"} object.}
 
-\item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}. Both axes
+\item{col}{colour of the residual curve.}
+
+\item{ref.col}{colour of the dashed y = x reference line (\code{NA} drops it).}
+
+\item{...}{further arguments passed to \code{\link[graphics:plot.default]{graphics::plot()}}, such as \code{main}. Both axes
 default to the same range starting at 0, so the reference line is the
 diagonal of the plot.}
 }

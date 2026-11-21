@@ -153,22 +153,39 @@ predict.rpcr <- function(object, newdata = NULL, newdata0 = NULL, times = NULL,
 #' @param x a fitted `"rpcr"` object.
 #' @param newdata covariate profile(s), one row per curve; defaults to one profile with numeric
 #'   variables at their mean and factors at their most common value, as in [plot.rpsurv()].
-#' @param type `"cif"` (cumulative incidence) or `"shr"` (subdistribution hazard ratio of each row of
-#'   `newdata` vs `newdata0`, useful under `tve`).
-#' @param newdata0 reference profile(s) for `type = "shr"`.
+#' @param type `"cif"` (cumulative incidence), `"cifdiff"` (difference in cumulative incidence
+#'   `F(t | newdata) - F(t | newdata0)`, the absolute risk difference, with its 95% delta-method band
+#'   and a dashed line at 0) or `"shr"` (subdistribution hazard ratio of each row of `newdata` vs
+#'   `newdata0`, useful under `tve`).
+#' @param newdata0 reference profile(s) for `type = "cifdiff"` and `"shr"`, one row per row of
+#'   `newdata`.
 #' @param times,ci,col,legend,labels,... as in [plot.rpsurv()]: `legend` is `TRUE`, `FALSE` or a
 #'   position, and custom curve labels go in `labels = c("Remission", "Relapse")` (or `legend =` a
-#'   vector of labels).
+#'   vector of labels). Colours default to black, blue, vermillion, then Okabe-Ito. `...` goes to
+#'   [graphics::plot()] (`xlab`, `ylab`, `ylim`, `main`; no title by default).
+#' @param ref.line logical; for `"cifdiff"` and `"shr"`, a dashed grey line at no effect (0 or 1).
 #' @return invisibly, the plotted predictions (see [predict.rpcr()]).
+#' @examples
+#' \donttest{
+#' d <- survival::mgus2
+#' d$etime <- with(d, ifelse(pstat == 1, ptime, futime))
+#' d$event <- factor(with(d, ifelse(pstat == 1, 1, 2 * death)), 0:2, c("censor", "pcm", "death"))
+#' fit <- rpcr(survival::Surv(etime, event) ~ sex + age, data = d, cause = "pcm")
+#' plot(fit, type = "cifdiff", newdata = data.frame(sex = "M", age = 70),
+#'      newdata0 = data.frame(sex = "F", age = 70), ylab = "CIF difference, men - women")
+#' }
 #' @export
-plot.rpcr <- function(x, newdata = NULL, type = c("cif", "shr"), newdata0 = NULL, times = NULL,
-                      ci = TRUE, col = NULL, legend = NULL, labels = NULL, ...) {
+plot.rpcr <- function(x, newdata = NULL, type = c("cif", "shr", "cifdiff"), newdata0 = NULL, times = NULL,
+                      ci = TRUE, col = NULL, legend = NULL, labels = NULL, ref.line = TRUE, ...) {
   type <- match.arg(type)
   newdata <- as.data.frame(if (is.null(newdata)) rp_default_profile(x) else newdata)
   n <- max(1L, nrow(newdata))
-  col <- rep_len(if (is.null(col)) seq_len(n) else col, n)
+  col <- rep_len(if (is.null(col)) rp_palette(n) else col, n)
   pred <- predict(x, newdata, newdata0, times, type = type, se.fit = ci)
-  ylab <- if (type == "cif") paste0("Cumulative incidence (cause ", x$cause, ")") else
-    "Subdistribution hazard ratio"
-  rp_draw_curves(pred, newdata, ylab, type == "cif", col, legend, list(...), labels)
+  ylab <- switch(type, cif = paste0("Cumulative incidence (cause ", x$cause, ")"),
+                 cifdiff = paste0("CIF difference (cause ", x$cause, ")"),
+                 shr = "Subdistribution hazard ratio")
+  out <- rp_draw_curves(pred, newdata, ylab, type == "cif", col, legend, list(...), labels)
+  if (ref.line && type != "cif") graphics::abline(h = as.numeric(type == "shr"), lty = 2, col = "grey50")
+  invisible(out)
 }

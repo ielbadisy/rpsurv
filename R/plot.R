@@ -20,7 +20,9 @@
 #'   points from the first event time to the last follow-up time, the range
 #'   over which the model is estimated.
 #' @param ci logical; add a 95% delta-method confidence band (pointwise).
-#' @param col colour(s), recycled over rows of `newdata`.
+#' @param col colour(s), recycled over rows of `newdata`. By default black,
+#'   blue, vermillion, then the other Okabe-Ito colours (colour-blind safe).
+#'   For `type = "coxsnell"`, the colour of the residual curve.
 #' @param legend `TRUE`, `FALSE`, or a position keyword accepted by
 #'   [graphics::legend()] for the legend identifying the curves, labelled
 #'   by the `newdata` columns that differ between rows. By default a legend
@@ -35,9 +37,12 @@
 #' @param labels optional character vector, one legend label per row of
 #'   `newdata` (predicted curves only), replacing the default labels built
 #'   from the `newdata` columns, e.g. `labels = c("Remission", "Relapse")`.
-#'   Giving `labels` draws the legend unless `legend = FALSE`.
+#'   Giving `labels` draws the legend unless `legend = FALSE`. For
+#'   `type = "km"`, the two curve labels of [kmcompareplot()].
 #' @param ... further arguments passed to [graphics::plot()], such as
-#'   `ylim` or `main` (and `n_grid` for `type = "km"`).
+#'   `ylim` or `main` (and `n_grid`, `minn`, `levels`, `grouplabels` for
+#'   `type = "km"`, `ref.col` for `type = "coxsnell"`). No title is drawn
+#'   unless `main` is given.
 #' @return Called for its side effect of drawing the plot. For the
 #'   diagnostics, invisibly returns the value of [coxsnellplot()] or
 #'   [kmcompareplot()]. For predicted curves, invisibly returns the
@@ -58,8 +63,8 @@ plot.rpsurv <- function(x, newdata = NULL,
                         labels = NULL, ...) {
   type <- match.arg(type)
   if (type %in% c("coxsnell", "km")) {
-    unused <- c(newdata = !is.null(newdata), times = !is.null(times), ci = !missing(ci), labels = !is.null(labels))
-    if (type == "coxsnell") unused <- c(unused, col = !is.null(col), legend = !is.null(legend))
+    unused <- c(newdata = !is.null(newdata), times = !is.null(times), ci = !missing(ci))
+    if (type == "coxsnell") unused <- c(unused, legend = !is.null(legend), labels = !is.null(labels))
     if (any(unused)) {
       stop("`", paste(names(unused)[unused], collapse = "`, `"), "` ",
            if (sum(unused) > 1L) "do" else "does", " not apply to type = \"", type,
@@ -67,15 +72,15 @@ plot.rpsurv <- function(x, newdata = NULL,
     }
     if (type == "coxsnell") {
       if (!is.null(by)) stop("`by` applies to type = \"km\" only.", call. = FALSE)
-      return(coxsnellplot(x, ...))
+      return(if (is.null(col)) coxsnellplot(x, ...) else coxsnellplot(x, col = col, ...))
     }
-    return(kmcompareplot(x, by = by, col = col,
-                           legend = if (is.null(legend)) TRUE else legend, ...))
+    km <- list(x, by = by, col = col, legend = if (is.null(legend)) TRUE else legend)
+    return(do.call(kmcompareplot, c(km, if (!is.null(labels)) list(labels = labels), list(...))))
   }
   if (!is.null(by)) stop("`by` applies to type = \"km\" only.", call. = FALSE)
   if (is.null(newdata)) newdata <- rp_default_profile(x)
   newdata <- as.data.frame(newdata)
-  col <- rep_len(if (is.null(col)) seq_len(max(1L, nrow(newdata))) else col, max(1L, nrow(newdata)))
+  col <- rep_len(if (is.null(col)) rp_palette(max(1L, nrow(newdata))) else col, max(1L, nrow(newdata)))
 
   pred <- predict(x, newdata = newdata, times = times, type = type, se.fit = ci)
   ylab <- switch(type, survival = "Survival probability", hazard = "Hazard", cumhaz = "Cumulative hazard")
@@ -110,6 +115,13 @@ rp_draw_curves <- function(pred, newdata, ylab, prob, col, legend, dots, labels 
                      bty = "n", inset = 0.02)
   }
   invisible(pred)
+}
+
+# Default colours: black, blue, vermillion, then the rest of Okabe-Ito (colour-blind safe), recycled.
+#' @keywords internal
+rp_palette <- function(k) {
+  rep_len(c("black", "#0072B2", "#D55E00", "#009E73", "#E69F00", "#56B4E9", "#CC79A7", "#F0E442",
+            "grey50", "grey75"), k)
 }
 
 # Legend position (TRUE = automatic, FALSE = none) and labels. A character `legend` that is not a single

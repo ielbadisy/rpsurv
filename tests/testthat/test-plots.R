@@ -216,3 +216,48 @@ test_that("custom legend labels in plot.rpsurv and plot.rpcr", {
   expect_equal(plot(cr, newdata = data.frame(x = 0:1), legend = c("Remission", "Relapse")), q0)
   expect_equal(plot(cr, newdata = data.frame(x = 0:1), labels = c("Remission", "Relapse"), legend = "topleft"), q0)
 })
+
+# Colours and legend text drawn on the current device (from the recorded display list).
+drawn <- function() {
+  a <- unlist(lapply(grDevices::recordPlot()[[1]], function(e) Filter(is.character, e[[2]])))
+  unique(a)
+}
+
+test_that("default colours are black, blue, vermillion (Okabe-Ito), not rainbow or red", {
+  expect_equal(rpsurv:::rp_palette(3), c("black", "#0072B2", "#D55E00"))
+  pdf(NULL); dev.control("enable"); on.exit(dev.off())
+  fit <- rpsurv(survival::Surv(time, status) ~ trt + celltype, data = veteran)
+  kmcompareplot(fit, by = "celltype")
+  expect_true(all(rpsurv:::rp_palette(4) %in% drawn()))
+  kmcompareplot(fit)
+  expect_true(all(c("black", "#0072B2", "Kaplan-Meier", "Model") %in% drawn()))
+  expect_false(any(grepl("rpsurv", drawn())))
+  plot(fit, newdata = data.frame(trt = 1, celltype = c("squamous", "adeno")))
+  expect_true(all(c("black", "#0072B2") %in% drawn()))
+  coxsnellplot(fit)
+  expect_true("grey50" %in% drawn()); expect_false("red" %in% drawn())
+  coxsnellplot(fit, col = "#0072B2", ref.col = "black")
+  expect_true(all(c("#0072B2", "black") %in% drawn()))
+  expect_equal(plot(fit, type = "coxsnell", col = "#0072B2", ref.col = NA), coxsnellplot(fit))
+})
+
+test_that("kmcompareplot: minn, levels, labels and grouplabels", {
+  d <- transform(na.omit(survival::lung[, c("time", "status", "age", "ph.ecog")]), status = status - 1)
+  fit <- rpsurv(survival::Surv(time, status) ~ age + ph.ecog, data = d, df = 2)
+  pdf(NULL); dev.control("enable"); on.exit(dev.off())
+  expect_setequal(unique(kmcompareplot(fit, by = "ph.ecog")$group), as.character(0:3))
+  k <- kmcompareplot(fit, by = "ph.ecog", minn = 10)
+  expect_setequal(unique(k$group), as.character(0:2))
+  k0 <- kmcompareplot(fit, by = "ph.ecog")
+  expect_equal(k[k$group == "0", ], k0[k0$group == "0", ], ignore_attr = TRUE)
+  k <- kmcompareplot(fit, by = "ph.ecog", levels = c(2, 0), labels = c("KM", "Flexible parametric"),
+                     grouplabels = c("ECOG 2", "ECOG 0"))
+  expect_equal(unique(k$group), c("2", "0"))
+  expect_true(all(c("KM", "Flexible parametric", "ECOG 2", "ECOG 0") %in% drawn()))
+  expect_false(any(grepl("ph.ecog =", drawn())))
+  k <- plot(fit, type = "km", by = "ph.ecog", minn = 10, labels = c("A", "B"))
+  expect_true(all(c("A", "B") %in% drawn()))
+  expect_identical(k, kmcompareplot(fit, by = "ph.ecog", minn = 10))
+  expect_error(kmcompareplot(fit, by = "ph.ecog", minn = 1000), "no group")
+  expect_error(kmcompareplot(fit, by = "ph.ecog", minn = 10, grouplabels = "a"), "one entry per group")
+})

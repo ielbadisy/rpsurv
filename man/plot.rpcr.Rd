@@ -7,13 +7,14 @@
 \method{plot}{rpcr}(
   x,
   newdata = NULL,
-  type = c("cif", "shr"),
+  type = c("cif", "shr", "cifdiff"),
   newdata0 = NULL,
   times = NULL,
   ci = TRUE,
   col = NULL,
   legend = NULL,
   labels = NULL,
+  ref.line = TRUE,
   ...
 )
 }
@@ -23,18 +24,34 @@
 \item{newdata}{covariate profile(s), one row per curve; defaults to one profile with numeric
 variables at their mean and factors at their most common value, as in \code{\link[=plot.rpsurv]{plot.rpsurv()}}.}
 
-\item{type}{\code{"cif"} (cumulative incidence) or \code{"shr"} (subdistribution hazard ratio of each row of
-\code{newdata} vs \code{newdata0}, useful under \code{tve}).}
+\item{type}{\code{"cif"} (cumulative incidence), \code{"cifdiff"} (difference in cumulative incidence
+\code{F(t | newdata) - F(t | newdata0)}, the absolute risk difference, with its 95\% delta-method band
+and a dashed line at 0) or \code{"shr"} (subdistribution hazard ratio of each row of \code{newdata} vs
+\code{newdata0}, useful under \code{tve}).}
 
-\item{newdata0}{reference profile(s) for \code{type = "shr"}.}
+\item{newdata0}{reference profile(s) for \code{type = "cifdiff"} and \code{"shr"}, one row per row of
+\code{newdata}.}
 
 \item{times, ci, col, legend, labels, ...}{as in \code{\link[=plot.rpsurv]{plot.rpsurv()}}: \code{legend} is \code{TRUE}, \code{FALSE} or a
 position, and custom curve labels go in \code{labels = c("Remission", "Relapse")} (or \verb{legend =} a
-vector of labels).}
+vector of labels). Colours default to black, blue, vermillion, then Okabe-Ito. \code{...} goes to
+\code{\link[graphics:plot.default]{graphics::plot()}} (\code{xlab}, \code{ylab}, \code{ylim}, \code{main}; no title by default).}
+
+\item{ref.line}{logical; for \code{"cifdiff"} and \code{"shr"}, a dashed grey line at no effect (0 or 1).}
 }
 \value{
 invisibly, the plotted predictions (see \code{\link[=predict.rpcr]{predict.rpcr()}}).
 }
 \description{
 Plot cumulative incidence curves from a flexible parametric Fine-Gray model
+}
+\examples{
+\donttest{
+d <- survival::mgus2
+d$etime <- with(d, ifelse(pstat == 1, ptime, futime))
+d$event <- factor(with(d, ifelse(pstat == 1, 1, 2 * death)), 0:2, c("censor", "pcm", "death"))
+fit <- rpcr(survival::Surv(etime, event) ~ sex + age, data = d, cause = "pcm")
+plot(fit, type = "cifdiff", newdata = data.frame(sex = "M", age = 70),
+     newdata0 = data.frame(sex = "F", age = 70), ylab = "CIF difference, men - women")
+}
 }
