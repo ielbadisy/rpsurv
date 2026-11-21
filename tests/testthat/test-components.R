@@ -118,3 +118,24 @@ test_that("rcsbasis and defaultknots are exported and match rstpm2", {
                (rcsbasis(x + h, k) - rcsbasis(x - h, k)) / (2 * h), tolerance = 1e-6)
   expect_error(rcsbasis(x, 1), "boundary knots")
 })
+
+test_that("nle.knots fixes the basis: default knots reproduce the default fit, and are kept", {
+  set.seed(11)
+  n <- 300
+  d <- data.frame(x1 = rbinom(n, 1, 0.5), x2 = rnorm(n))
+  d$time <- rexp(n, 0.2 * exp(0.5 * d$x1 + 0.3 * d$x2^2)); d$status <- rbinom(n, 1, 0.8)
+  f0 <- rpsurv(survival::Surv(time, status) ~ x1 + x2, data = d, nle = "x2", nle.df = 3)
+  f1 <- rpsurv(survival::Surv(time, status) ~ x1 + x2, data = d, nle = "x2", nle.knots = f0$nle_knots)
+  expect_equal(coef(f1), coef(f0), tolerance = 1e-5)
+  k <- c(-1.5, 0, 1.5)
+  d2 <- d; d2$x2 <- d2$x2 * 1.3
+  expect_identical(rpsurv(survival::Surv(time, status) ~ x1 + x2, data = d2, nle = "x2",
+                          nle.knots = list(x2 = k))$nle_knots$x2, k)
+  expect_error(rpsurv(survival::Surv(time, status) ~ x1 + x2, data = d, nle = "x2", nle.knots = list(x1 = k)),
+               "named by `nle`")
+  expect_error(rpsurv(survival::Surv(time, status) ~ x1 + x2, data = d, nle = "x2", nle.knots = list(x2 = 1)),
+               "two distinct")
+  fc <- rpcr(survival::Surv(time, status) ~ x1 + x2, data = transform(d, status = factor(status * (1 + x1))),
+             cause = "1", nle = "x2", nle.knots = list(x2 = k))
+  expect_identical(fc$nle_knots$x2, k)
+})

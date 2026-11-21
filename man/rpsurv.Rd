@@ -13,6 +13,7 @@ rpsurv(
   tve.df = 3,
   nle = NULL,
   nle.df = 3,
+  nle.knots = NULL,
   scale = c("hazard", "odds", "normal"),
   control = list(),
   weights = NULL
@@ -56,6 +57,12 @@ components separately.}
 \item{nle.df}{degrees of freedom for each non-linear effect spline (1 is
 linear): a single value for all \code{nle} covariates, or a vector named by
 covariate. Default 3.}
+
+\item{nle.knots}{optional named list of ALL knots (boundary knots first/last, on the
+covariate's scale) for some or all \code{nle} covariates, overriding \code{nle.df} for them,
+e.g. \code{list(x = c(-2, -0.5, 0.5, 2))}. Fixed knots keep the spline basis, and so the
+meaning of its coefficients, the same across data sets: needed to pool the coefficients
+over multiply imputed data sets, where default knots move with the imputed values.}
 
 \item{scale}{one of \code{"hazard"} (proportional hazards, the Royston-Parmar
 default), \code{"odds"} (proportional odds) or \code{"normal"} (probit).}

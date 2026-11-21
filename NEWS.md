@@ -1,3 +1,7 @@
+# rpsurv 0.8.9
+
+* `rpsurv()` and `rpcr()` gain `nle.knots =`, a list naming all knots of the non-linear effect spline per covariate, which overrides `nle.df`. The default knots sit at centiles of the covariate, so they move between multiply imputed data sets and the spline coefficients then mean something different in each; fixed knots give the same basis everywhere, so the coefficients can be pooled with Rubin's rules. Default output is unchanged.
+
 # rpsurv 0.8.8
 
 * `plot(<rpcr>)` gains `scale =` (default 1, unchanged output): a multiplier of the `"cif"` and

@@ -14,6 +14,7 @@ rpcr(
   tve.df = 3,
   nle = NULL,
   nle.df = 3,
+  nle.knots = NULL,
   scale = c("hazard", "odds", "normal"),
   control = list()
 )
@@ -27,7 +28,7 @@ numeric code 0/1/2, use \code{factor(status, 0:2)}).}
 
 \item{cause}{the event type (a level of \code{status}) whose cumulative incidence is modelled.}
 
-\item{df, knots, tve, tve.df, nle, nle.df, scale, control}{as in \code{\link[=rpsurv]{rpsurv()}}, applied to the
+\item{df, knots, tve, tve.df, nle, nle.df, nle.knots, scale, control}{as in \code{\link[=rpsurv]{rpsurv()}}, applied to the
 subdistribution: \code{scale = "hazard"} is the Fine-Gray (proportional subdistribution hazards)
 model, \code{"odds"} gives proportional odds of the CIF, and \code{tve} lets a subdistribution hazard ratio
 change over time. The default knots are placed at centiles of the log event times of \code{cause}.}
