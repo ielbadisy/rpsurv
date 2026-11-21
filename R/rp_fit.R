@@ -16,6 +16,13 @@ rp_link_fun <- function(scale) {
 }
 
 # Spline df for one term: a single value, or a vector named by covariate.
+rp_user_knots <- function(k, var) {
+  if (!is.numeric(k) || length(k) < 2L || any(!is.finite(k)) || anyDuplicated(k)) {
+    stop("`nle.knots` for ", var, " must hold at least two distinct finite values", call. = FALSE)
+  }
+  sort(as.numeric(k))
+}
+
 rp_term_df <- function(df, var, arg) {
   if (length(df) == 1L && is.null(names(df))) {
     k <- df
@@ -88,6 +95,11 @@ rp_start_values <- function(time, status, p, scale, max_n = 20000L) {
 #' @param nle.df degrees of freedom for each non-linear effect spline (1 is
 #'   linear): a single value for all `nle` covariates, or a vector named by
 #'   covariate. Default 3.
+#' @param nle.knots optional named list of ALL knots (boundary knots first/last, on the
+#'   covariate's scale) for some or all `nle` covariates, overriding `nle.df` for them,
+#'   e.g. `list(x = c(-2, -0.5, 0.5, 2))`. Fixed knots keep the spline basis, and so the
+#'   meaning of its coefficients, the same across data sets: needed to pool the coefficients
+#'   over multiply imputed data sets, where default knots move with the imputed values.
 #' @param scale one of `"hazard"` (proportional hazards, the Royston-Parmar
 #'   default), `"odds"` (proportional odds) or `"normal"` (probit).
 #' @param weights optional case weights: a numeric vector with one non-negative value per row of `data`,
@@ -134,8 +146,8 @@ rp_start_values <- function(time, status, p, scale, max_n = 20000L) {
 #' @return an object of class `"rpsurv"`.
 #' @export
 rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
-                    nle = NULL, nle.df = 3, scale = c("hazard", "odds", "normal"), control = list(),
-                    weights = NULL) {
+                    nle = NULL, nle.df = 3, nle.knots = NULL, scale = c("hazard", "odds", "normal"),
+                    control = list(), weights = NULL) {
   scale <- match.arg(scale)
   w <- eval(substitute(weights), data, parent.frame())
   scale_code <- rp_scale_code(scale)
@@ -239,10 +251,14 @@ rpsurv <- function(formula, data, df = 4, knots = NULL, tve = NULL, tve.df = 3,
     )
   }
 
+  if (length(nle.knots) && (is.null(names(nle.knots)) || !all(names(nle.knots) %in% nle))) {
+    stop("`nle.knots` must be a list named by `nle` covariates", call. = FALSE)
+  }
   nle_knots <- NULL
   if (!is.null(nle) && length(nle)) {
     nle_knots <- stats::setNames(
       lapply(nle, function(v) {
+        if (!is.null(nle.knots[[v]])) return(rp_user_knots(nle.knots[[v]], v))
         x <- cov_data[[v]]
         k <- rp_term_df(nle.df, v, "nle.df")
         if (length(unique(x)) < k + 2L) {

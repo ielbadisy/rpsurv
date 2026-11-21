@@ -16,7 +16,7 @@
 #'   numeric code 0/1/2, use `factor(status, 0:2)`).
 #' @param data a data frame, one row per subject.
 #' @param cause the event type (a level of `status`) whose cumulative incidence is modelled.
-#' @param df,knots,tve,tve.df,nle,nle.df,scale,control as in [rpsurv()], applied to the
+#' @param df,knots,tve,tve.df,nle,nle.df,nle.knots,scale,control as in [rpsurv()], applied to the
 #'   subdistribution: `scale = "hazard"` is the Fine-Gray (proportional subdistribution hazards)
 #'   model, `"odds"` gives proportional odds of the CIF, and `tve` lets a subdistribution hazard ratio
 #'   change over time. The default knots are placed at centiles of the log event times of `cause`.
@@ -43,7 +43,7 @@
 #' }
 #' @export
 rpcr <- function(formula, data, cause = 1, df = 4, knots = NULL, tve = NULL, tve.df = 3,
-                 nle = NULL, nle.df = 3, scale = c("hazard", "odds", "normal"), control = list()) {
+                 nle = NULL, nle.df = 3, nle.knots = NULL, scale = c("hazard", "odds", "normal"), control = list()) {
   scale <- match.arg(scale)
   labs <- attr(stats::terms(formula, data = data), "term.labels")
   mf <- stats::model.frame(formula, data)
@@ -60,7 +60,7 @@ rpcr <- function(formula, data, cause = 1, df = 4, knots = NULL, tve = NULL, tve
   fg <- cbind(sub[e$id, , drop = FALSE], .fgstart = e$start, .fgstop = e$stop, .fgstatus = e$status)
   f <- stats::reformulate(if (length(labs)) labs else "1",
                           quote(survival::Surv(.fgstart, .fgstop, .fgstatus)), env = environment(formula))
-  fit <- rpsurv(f, fg, df = df, knots = knots, tve = tve, tve.df = tve.df, nle = nle, nle.df = nle.df,
+  fit <- rpsurv(f, fg, df = df, knots = knots, tve = tve, tve.df = tve.df, nle = nle, nle.df = nle.df, nle.knots = nle.knots,
                 scale = scale, control = control, weights = e$w)
   # Sandwich clustered on the subject: a subject with a competing event contributes several weighted
   # rows, and the IPCW weights make the model-based variance invalid.
